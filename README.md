@@ -34,3 +34,18 @@ Architecture (subject to change):
     - requests + communication w/ A11Y service
         - websocket connection
     - routes/API for commands by user
+
+Directory Organization:
+- scripts
+- src
+    - common
+        - services
+            - llm_service
+        - db
+        - logging
+            - logger.py
+    - memory (background tasks)
+    - agent_service (user requests)
+    - core
+        - lifespan.py
+    - 
