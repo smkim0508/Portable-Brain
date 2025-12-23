@@ -41,11 +41,25 @@ Directory Organization:
     - common
         - services
             - llm_service
+            - kg/vector db services (future TBD)
+            - a11y_listener (websocket client)
         - db
         - logging
             - logger.py
     - memory (background tasks)
+        - baseline
+        - knowledge_graph
+        - vector_embeddings
+        - hypergraph
+        - temporal_graph
+        - common
     - agent_service (user requests)
+        - text
+        - share_media
+        - chat (answer questions, conversations, etc.)
+        - orchestrator
+        - common
+            - types/...
     - core
         - lifespan.py
-    - 
+    - app.py
