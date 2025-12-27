@@ -2,9 +2,9 @@
 Your second brain living inside carry-on devices. Memory based on day-to-day [smartphone] HCI observations & habits.
 
 #### TODO:
-- **important**: changing integration from A11Y inspector service to DroidRun and AppAgent (both open-source)
-- setting up communication with DroidRun App (Python SDK)
-- skeleton for agent and memory layer
+- set up poetry dependencies
+- set up core lifespan and FastAPI app dependencies
+- set up communication with DroidRun App (Python SDK)
 
 ### Architecture (subject to change):
 - FastAPI (Handles 2 main modes: background memory/KG updates + user request processing)
