@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
             INSTANCE=settings.MAIN_DB_INSTANCE,
             NAME=settings.MAIN_DB_NAME
         )
-        app.state.ai_db_engine = await stack.enter_async_context(create_db_engine_context(
+        app.state.main_db_engine = await stack.enter_async_context(create_db_engine_context(
             db_settings=main_db_settings
         ))
         logger.info("Main Database engine initialized.")
