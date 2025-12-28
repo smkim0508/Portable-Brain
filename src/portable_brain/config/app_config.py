@@ -36,7 +36,7 @@ class DefaultSettings(BaseSettings):
     APP_ENV: str = os.getenv("APP_ENV", "dev")
 
 class MainSettings(
-    MainDBSettingsMixin,
+    MainDBSettingsMixin, # could be split into a generic db classs and wrapper using db name (delimiter)
     GoogleGenAISettingsMixin,
     DefaultSettings # passed in last to set low priority
 ):
