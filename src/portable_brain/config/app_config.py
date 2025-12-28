@@ -49,8 +49,10 @@ class MainSettings(
     # generic rate limit settings, not tied to any LLM client
     RATE_LIMITS_ENABLED: bool = True
 
+    # default setting with env file path
     model_config = SettingsConfigDict(
-        env_file=env_file_path, env_file_encoding="utf-8", extra="ignore", env_nested_delimiter="__"
+        env_file=env_file_path, env_file_encoding="utf-8", extra="ignore"
+        # NOTE: use env_nested_delimiter="__" to allow nested env vars in future
     )
 
 # use lru cache to return a cached instance of main settings
