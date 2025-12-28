@@ -8,6 +8,7 @@ from portable_brain.config.settings_mixins import (
     MainDBSettingsMixin
 )
 from portable_brain.common.logging.logger import logger
+from functools import lru_cache
 
 # Determine which environment we're in. Default to 'dev'.
 # NOTE: for now, only dev is used, but subject to expand as service matures.
@@ -31,6 +32,7 @@ class DefaultSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file_encoding="utf-8", extra="ignore")
     
     # The application environment is the only truly universal setting.
+    # NOTE: this should be set in terminal to flexibly switch between different envs
     APP_ENV: str = os.getenv("APP_ENV", "dev")
 
 class MainSettings(
@@ -50,3 +52,9 @@ class MainSettings(
     model_config = SettingsConfigDict(
         env_file=env_file_path, env_file_encoding="utf-8", extra="ignore", env_nested_delimiter="__"
     )
+
+# use lru cache to return a cached instance of main settings
+# NOTE: makes settings accessible from anywhere in the app, without being request-scope
+@lru_cache()
+def get_main_settings() -> MainSettings:
+    return MainSettings() # type: ignore

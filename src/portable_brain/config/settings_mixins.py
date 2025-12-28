@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class MainDBSettingsMixin(BaseModel):
     """
-    A model for common SQLAlchemy connection pool settings.
+    Model for common SQLAlchemy connection pool settings.
     """
     MAIN_DB_POOL_SIZE: int = Field(default=5, description="Number of connections to keep in the pool.")
     MAIN_DB_MAX_OVERFLOW: int = Field(default=10, description="Max 'overflow' connections beyond pool_size.")
@@ -18,6 +18,8 @@ class MainDBSettingsMixin(BaseModel):
     MAIN_DB_NAME: str
 
 class GoogleGenAISettingsMixin(BaseModel):
+    """
+    Model for Google GenAI LLM Client settings.
+    """
     GOOGLE_GENAI_API_KEY: str
-
     
