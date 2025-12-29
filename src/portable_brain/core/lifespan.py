@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager, AsyncExitStack
 from fastapi import FastAPI
-from portable_brain.config.app_config import get_main_settings
+from portable_brain.config.app_config import get_service_settings
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import create_db_engine_context, DBSettings
 
@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
 
     # initialize resources during start up
     logger.info("Initializing app resources...")
-    settings = get_main_settings()
+    settings = get_service_settings()
 
     async with AsyncExitStack() as stack:
         

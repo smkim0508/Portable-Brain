@@ -35,13 +35,13 @@ class DefaultSettings(BaseSettings):
     # NOTE: this should be set in terminal to flexibly switch between different envs
     APP_ENV: str = os.getenv("APP_ENV", "dev")
 
-class MainSettings(
+class ServiceSettings(
     MainDBSettingsMixin, # could be split into a generic db classs and wrapper using db name (delimiter)
     GoogleGenAISettingsMixin,
     DefaultSettings # passed in last to set low priority
 ):
     """
-    The main app settings.
+    The main service settings.
     Setting mix-ins are passed in for different services/clients.
     TODO: as the service expands, set global-scope configs here.
     """
@@ -49,14 +49,17 @@ class MainSettings(
     # generic rate limit settings, not tied to any LLM client
     RATE_LIMITS_ENABLED: bool = True
 
+    # FastAPI docs settings
+    INCLUDE_DOCS: bool = False # by default disable, only enable in dev
+
     # default setting with env file path
     model_config = SettingsConfigDict(
         env_file=env_file_path, env_file_encoding="utf-8", extra="ignore"
         # NOTE: use env_nested_delimiter="__" to allow nested env vars in future
     )
 
-# use lru cache to return a cached instance of main settings
+# use lru cache to return a cached instance of service settings
 # NOTE: makes settings accessible from anywhere in the app, without being request-scope
 @lru_cache()
-def get_main_settings() -> MainSettings:
-    return MainSettings() # type: ignore
+def get_service_settings() -> ServiceSettings:
+    return ServiceSettings() # type: ignore
