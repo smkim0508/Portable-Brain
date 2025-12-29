@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any, Optional, Dict
 from portable_brain.common.logging.logger import logger
@@ -7,7 +7,11 @@ from portable_brain.core.lifespan import lifespan
 from fastapi.middleware.cors import CORSMiddleware
 from portable_brain.common.db.session import get_async_session_maker
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 from portable_brain.agent_service.api.routes.test_route import router as test_router
+from portable_brain.core.dependencies import get_llm_client, get_main_db_engine
+from portable_brain.common.services.llm_service.llm_client import TypedLLMProtocol
+from portable_brain.agent_service.common.types.test_llm_outputs import TestLLMOutput
 
 # disable FastAPI docs for production/deployment
 is_local = get_service_settings().INCLUDE_DOCS
@@ -45,20 +49,73 @@ async def root():
 
 # health endpoint
 @app.get("/health")
-async def health():
-    # TODO: add more health checks w/ services
+async def health(
+    main_db_engine: AsyncEngine = Depends(get_main_db_engine),
+    llm_client: TypedLLMProtocol = Depends(get_llm_client),
+):
+    """
+    Comprehensive health check for all services.
+    Checks all services independently and returns detailed status for each.
+    LLM checks are disabled by default in production to avoid API costs.
+    """
 
-    main_db_engine = app.state.main_db_engine
+    health_status = {
+        "status": "healthy",
+        "services": {}
+    }
+
+    # Check database connection (always enabled)
+    db_healthy = False
     main_session_maker = get_async_session_maker(main_db_engine)
-
     try:
-        # simple test query to verify db connection
         async with main_session_maker() as session:
             await session.execute(text("SELECT 1"))
+        db_healthy = True
+        health_status["services"]["database"] = {
+            "status": "healthy",
+            "message": "Connected to main database"
+        }
+        logger.info("Database health check passed")
     except Exception as e:
-        logger.info(f"error: {e}")
-        return {"status": "error", "database": "unable to connect to main database"}
+        health_status["services"]["database"] = {
+            "status": "unhealthy",
+            "message": f"Unable to connect: {str(e)}"
+        }
+        logger.error(f"Database health check failed: {e}")
 
-    return {"status": "ok", "database": "connected to main database"}
+    # Check LLM connection (only if enabled via config)
+    llm_healthy = True  # Default to true if check is disabled
+    allow_llm_check = get_service_settings().HEALTH_CHECK_LLM
+    if allow_llm_check:
+        llm_healthy = False
+        try:
+            llm_response = await llm_client.acreate(
+                response_model=TestLLMOutput,
+                system_prompt="Are you connected?",
+                user_prompt="Respond with 'True'.",
+            )
+            llm_healthy = True
+            health_status["services"]["llm"] = {
+                "status": "healthy",
+                "message": "Connected to LLM"
+            }
+            logger.info(f"LLM health check passed, response: {llm_response}")
+        except Exception as e:
+            health_status["services"]["llm"] = {
+                "status": "unhealthy",
+                "message": f"Unable to connect: {str(e)}"
+            }
+            logger.error(f"LLM health check failed: {e}")
+    else:
+        health_status["services"]["llm"] = {
+            "status": "skipped",
+            "message": "LLM health check disabled in production."
+        }
+
+    # Set overall status based on all service checks
+    if not (db_healthy and llm_healthy):
+        health_status["status"] = "unhealthy"
+
+    return health_status
 
 app.include_router(test_router)

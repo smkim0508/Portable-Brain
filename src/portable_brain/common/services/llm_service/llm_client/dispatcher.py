@@ -10,7 +10,7 @@ PydanticModel = TypeVar("PydanticModel", bound=BaseModel)
 
 # NOTE: to be expanded with more services if desired
 class LLMProvider(Enum):
-    VERTEX = auto()
+    GOOGLE_GENAI = auto() # just need a unique identifier
 
 class TypedLLMClient:
     def __init__(self, provider: LLMProvider, client: TypedLLMProtocol):

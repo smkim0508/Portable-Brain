@@ -52,6 +52,9 @@ class ServiceSettings(
     # FastAPI docs settings
     INCLUDE_DOCS: bool = False # by default disable, only enable in dev
 
+    # Health check settings
+    HEALTH_CHECK_LLM: bool = False # disable expensive LLM checks in prod by default
+
     # default setting with env file path
     model_config = SettingsConfigDict(
         env_file=env_file_path, env_file_encoding="utf-8", extra="ignore"

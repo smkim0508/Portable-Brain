@@ -3,11 +3,19 @@ from fastapi import FastAPI
 from portable_brain.config.app_config import get_service_settings
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import create_db_engine_context, parse_db_settings_from_service, DBSettings, DBType
+from portable_brain.common.services.llm_service.llm_client import TypedLLMClient, TypedLLMProtocol, LLMProvider
+from portable_brain.common.services.llm_service.llm_client.google_genai_client import AsyncGenAITypedClient
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Manages the service's startup and shutdown events.
+    Uses the AsyncExitStack to clean up resources.
+    Register resources to the app state to be used as dependencies.
+
+    NOTE:
+    - Use stack.enter_async_context when the resource has __aenter__ and __aexit__ support
+    - Use stack.push_async_context to register the clean up method only
     """
     # default start up message
     logger.info(f"Starting Portable-Brain service!")
@@ -19,11 +27,8 @@ async def lifespan(app: FastAPI):
     async with AsyncExitStack() as stack:
         
         # TODO: add any initialization code here
-        # use stack.enter_async_context when the resource has __aenter__ and __aexit__ support
-        # use stack.push_async_context to register the clean up method only
 
         # Main db engine
-
         # parse main db settings, and create engine
         main_db_settings = parse_db_settings_from_service(settings, DBType.MainDB)
         app.state.main_db_engine = await stack.enter_async_context(
@@ -32,6 +37,15 @@ async def lifespan(app: FastAPI):
             )
         )
         logger.info("Main database engine initialized.")
+
+        # LLM clients (no need for resource clean up)
+        
+        # NOTE: for now, only Google GenAI client
+        google_llm_client = AsyncGenAITypedClient(api_key=settings.GOOGLE_GENAI_API_KEY)
+        # wrap around GenAI client for management
+        typed_llm_client = TypedLLMClient(provider=LLMProvider.GOOGLE_GENAI, client=google_llm_client)
+        app.state.llm_client = typed_llm_client
+        logger.info(f"LLM client (GOOGLE GENAI) initialized.")
 
         try:
             # lets FastAPI process requests during yield
