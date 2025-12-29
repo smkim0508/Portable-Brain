@@ -12,6 +12,7 @@ from portable_brain.agent_service.api.routes.test_route import router as test_ro
 from portable_brain.core.dependencies import get_llm_client, get_main_db_engine
 from portable_brain.common.services.llm_service.llm_client import TypedLLMProtocol
 from portable_brain.agent_service.common.types.test_llm_outputs import TestLLMOutput
+from portable_brain.middleware.logging_middleware import LoggingMiddleware
 
 # disable FastAPI docs for production/deployment
 is_local = get_service_settings().INCLUDE_DOCS
@@ -41,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# add logging middleware for requests
+app.add_middleware(LoggingMiddleware)
 
 # test endpoint
 @app.get("/")
