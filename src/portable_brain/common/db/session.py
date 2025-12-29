@@ -1,14 +1,16 @@
-from functools import lru_cache
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
-from contextlib import asynccontextmanager 
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-import asyncio
+from urllib.parse import quote_plus
 from pydantic import BaseModel
-# supabase connector
+from portable_brain.config.app_config import ServiceSettings
+from enum import Enum
+from portable_brain.common.logging.logger import logger
 
 class DBSettings(BaseModel):
     """
-    Portable DB settings class used to pass in configs for generic Postgres connection
+    Portable DB settings class used to pass in configs for generic Postgres connection.
+    Provides validation layer for database configuration.
     """
     POOL_SIZE: int = 5
     MAX_OVERFLOW: int = 10
@@ -16,49 +18,91 @@ class DBSettings(BaseModel):
     POOL_RECYCLE: int = 1800
     USER: str
     PW: str
-    INSTANCE: str
+    HOST: str
+    PORT: str
     NAME: str
+
+class DBType(str, Enum):
+    """
+    Enum types for different DBs.
+    For now, just main db.
+    """
+    MainDB = "MAIN_DB"
+
+def parse_db_settings_from_service(settings: ServiceSettings, db_type: DBType = DBType.MainDB) -> DBSettings:
+    """
+    Helper to extract and validate database settings from ServiceSettings.
+    Specify the db_type to parse accordingly, defaults to MAIN_DB.
+    """
+    if db_type == DBType.MainDB:
+        return DBSettings(
+            POOL_SIZE=settings.MAIN_DB_POOL_SIZE,
+            MAX_OVERFLOW=settings.MAIN_DB_MAX_OVERFLOW,
+            POOL_TIMEOUT=settings.MAIN_DB_POOL_TIMEOUT,
+            POOL_RECYCLE=settings.MAIN_DB_POOL_RECYCLE,
+            USER=settings.MAIN_DB_USER,
+            HOST=settings.MAIN_DB_HOST,
+            PW=settings.MAIN_DB_PW,
+            PORT=settings.MAIN_DB_PORT,
+            NAME=settings.MAIN_DB_NAME
+        )
+    else:
+        logger.error(f"Unknown DB type: {db_type}, shutting down service. Please double check!")
+        raise ValueError(f"Unknown DB type: {db_type}")
+
+def build_supabase_url(db_settings: DBSettings) -> str:
+    """
+    Build async PostgreSQL connection URL for Supabase.
+    Uses asyncpg driver and enforces SSL connection.
+    """
+    # URL-encode credentials to handle special characters
+    user = quote_plus(db_settings.USER)
+    password = quote_plus(db_settings.PW)
+
+    # Supabase host format: db.{project_ref}.supabase.co
+    host = db_settings.HOST
+    port = db_settings.PORT
+    db_name = db_settings.NAME
+
+    # Build connection URL with SSL requirement for Supabase
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}?sslmode=require"
 
 @asynccontextmanager
 async def create_db_engine_context(
     db_settings: DBSettings
 ) -> AsyncGenerator[AsyncEngine, None]:
     """
-    A generic, reusable asynchronous context manager for creating Supabase db engine and disposing connection.
-    For now, only used for main db, but can be expanded.
-    """ 
-    # Use create_async_connector to ensure the Connector uses the current event loop.
-    loop = asyncio.get_running_loop()
-    async with Connector(loop=loop) as connector: # TODO: connect with supabase
-    
-        # Create the SQLAlchemy engine using the connector
-        engine = create_async_engine(
-            "postgresql+asyncpg://",
-            async_creator=lambda: connector.connect_async(
-                db_settings.INSTANCE, "asyncpg", user=db_settings.USER, password=db_settings.PW, db=db_settings.NAME
-            ),
-            pool_size=db_settings.POOL_SIZE,
-            max_overflow=db_settings.MAX_OVERFLOW,
-            pool_timeout=db_settings.POOL_TIMEOUT,
-            pool_recycle=db_settings.POOL_RECYCLE,
-            echo=False,
-        )
-        
-        try:
-            # Yield the engine for use within the `async with` block
-            yield engine
-        finally:
-            # This cleanup is guaranteed to run when the `async with` block is exited
-            await engine.dispose()
+    Async context manager for creating Supabase database engine and managing its lifecycle.
+    Automatically disposes of the engine when exiting the context.
+    """
+    database_url = build_supabase_url(db_settings)
 
-    """
-    NOTE: Since the engine is now managed by the context manager, we create the session maker
-    inside the `async with` block where the engine is available.
-    Reusable session maker factory.
-    """
+    # Create async engine with connection pooling
+    engine = create_async_engine(
+        database_url,
+        pool_size=db_settings.POOL_SIZE,
+        max_overflow=db_settings.MAX_OVERFLOW,
+        pool_timeout=db_settings.POOL_TIMEOUT,
+        pool_recycle=db_settings.POOL_RECYCLE,
+        echo=False, # Set to True for SQL query logging during development
+        pool_pre_ping=True, # Verify connections before using them
+    )
+
+    try:
+        # Yield the engine for use within the 'async with' block in lifespan
+        yield engine
+    finally:
+        # Cleanup: dispose of the engine and close all connections
+        await engine.dispose()
 
 def get_async_session_maker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     """
-    Returns a session maker for the given engine.
+    Creates a session maker factory for the given async engine.
     """
-    return async_sessionmaker(engine, expire_on_commit=False)
+    return async_sessionmaker(
+        engine,
+        class_=AsyncSession, # explicitly declare type
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False
+    )

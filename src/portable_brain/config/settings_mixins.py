@@ -14,7 +14,8 @@ class MainDBSettingsMixin(BaseModel):
     
     MAIN_DB_USER: str
     MAIN_DB_PW: str
-    MAIN_DB_INSTANCE: str
+    MAIN_DB_HOST: str
+    MAIN_DB_PORT: str
     MAIN_DB_NAME: str
 
 class GoogleGenAISettingsMixin(BaseModel):
