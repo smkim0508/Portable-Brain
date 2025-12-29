@@ -1,5 +1,6 @@
 # test route for router + dependency injection
 
+import time
 from fastapi import APIRouter, Depends
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import get_async_session_maker
