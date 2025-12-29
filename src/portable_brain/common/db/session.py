@@ -65,7 +65,8 @@ def build_supabase_url(db_settings: DBSettings) -> str:
     db_name = db_settings.NAME
 
     # Build connection URL with SSL requirement for Supabase
-    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}?sslmode=require"
+    # NOTE: asyncpg uses 'ssl=require' to enforce SSL connections
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}?ssl=require"
 
 @asynccontextmanager
 async def create_db_engine_context(

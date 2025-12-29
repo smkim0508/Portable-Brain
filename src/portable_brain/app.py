@@ -5,6 +5,8 @@ from portable_brain.common.logging.logger import logger
 from portable_brain.config.app_config import get_service_settings
 from portable_brain.core.lifespan import lifespan
 from fastapi.middleware.cors import CORSMiddleware
+from portable_brain.common.db.session import get_async_session_maker
+from sqlalchemy import text
 
 # disable FastAPI docs for production/deployment
 is_local = get_service_settings().INCLUDE_DOCS
@@ -39,3 +41,21 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+# health endpoint
+@app.get("/health")
+async def health():
+    # TODO: add more health checks w/ services
+
+    main_db_engine = app.state.main_db_engine
+    main_session_maker = get_async_session_maker(main_db_engine)
+
+    try:
+        # simple test query to verify db connection
+        async with main_session_maker() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as e:
+        logger.info(f"error: {e}")
+        return {"status": "error", "database": "unable to connect to main database"}
+
+    return {"status": "ok", "database": "connected to main database"}
