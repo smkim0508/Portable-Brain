@@ -62,7 +62,7 @@ class DroidRunClient:
         device_serial: str = "emulator-5554",
         use_tcp: bool = True,
         llm_instance = None, # optionally, pass in an LLM instance instead of initializing here
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None # can use observation-only without LLM
     ):
         """
         Initialize DroidRun client.
@@ -74,8 +74,9 @@ class DroidRunClient:
             api_key: Google API key; optional, since observation does not require LLM initialization.
             NOTE: still highly recommended to initialize service with DroidRun's internal LLM to execute commands.
         """
-        self.device_serial = device_serial
-        self.use_tcp = use_tcp
+        self.device_serial: str = device_serial
+        self.use_tcp: bool = use_tcp
+        self.disable_llm: bool = False
 
         # Initialize LLM: use provided instance or load from DroidRun
         if llm_instance is not None:
@@ -83,17 +84,21 @@ class DroidRunClient:
         else:
             # Use DroidRun's load_llm with Google provider
             # Set API key in environment if provided
-            # NOTE: DroidRun Client expects precisely "GOOGLE_API_KEY" in the environment, so we set it explicitly.
-            if api_key:
-                os.environ['GOOGLE_API_KEY'] = api_key
-
-                self.llm = load_llm(
-                    provider_name="GoogleGenAI",
-                    model="gemini-2.5-flash-lite"
-                )
-                logger.info(f"Successfully initialized LLM agent for DroidRun!")
-            else:
-                logger.warning(f"NO LLM client initialized for DroidRun. You will not be able to execute commands, OBSERVATION ONLY!")
+            try:
+                if api_key:
+                    # NOTE: DroidRun Client expects precisely "GOOGLE_API_KEY" in the environment, so we set it explicitly.
+                    os.environ['GOOGLE_API_KEY'] = api_key
+                    self.llm = load_llm(
+                        provider_name="GoogleGenAI",
+                        model="gemini-2.5-flash-lite"
+                    )
+                    logger.info(f"Successfully initialized LLM agent for DroidRun!")
+                else:
+                    logger.warning(f"No LLM client provided for DroidAgent. You will not be able to execute commands, OBSERVATION ONLY!")
+                    self.disable_llm = True
+            except Exception as e:
+                logger.error(f"LLM client initialization failed for DroidAgent, error: {e}.\nYou will not be able to execute commands, OBSERVATION ONLY!")
+                self.disable_llm = True
 
         # Initialize AdbTools for monitoring and direct control
         self.tools = AdbTools(
@@ -176,8 +181,8 @@ class DroidRunClient:
             print(f"Success: {result.success}")
             print(f"Answer: {result.reason}")
         """
-        if not self.llm:
-            raise ValueError("LLM instance required for execute_command()")
+        if not self.llm or self.disable_llm:
+            raise ValueError("LLM instance required for execute_command() - OBSERVATION ONLY MODE.")
 
         # Capture state before execution
         state_before = await self.tools.get_state()
