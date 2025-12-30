@@ -2,14 +2,27 @@
 Your second brain living inside carry-on devices. Memory based on day-to-day [smartphone] HCI observations & habits.
 
 #### TODO:
-- set up communication with DroidRun App (Python SDK)
+- Experiment with Portal APK client for data parsing, implement filters
+- Test natural language query capabilities for DroidRun Agent (w/ "Kevin" example)
 
 ### How to Run (Locally):
 - Use uvicorn + FastAPI set up to run the service locally.
 - `poetry run uvicorn portable_brain.app:app --reload`
 
-### DroidRun Management
-- Initialize set up with `droidrun setup` in terminal.
+### DroidRun Client Connection
+- Initialize set up with `droidrun setup` in terminal (one-time).
+- Start the android emulator with `emulator -avd <your_avd_name>`.
+- Verify ADB connection with `adb devices` - emulator-5554 device should show up.
+- Set up TCP forwarding (for local development w/ emulated android device) using `adb forward tcp:8001 tcp:8001`.
+
+#### Install and set up Portal APK (DroidRun's android application that exposes A11Y tree information)
+- adb -s emulator-5554 install path/to/portal.apk
+- Navigate to `Settings > Accessibility > "Droidrun Portal"` on emulated Android device.
+- Enable the application.
+- Start the Portal application with `adb -s emulator-5554 shell am start-foreground-service com.android.portal/.PortalService`
+- Verify that the Portal app is running with `adb -s emulator-5554 shell dumpsys accessibility | grep -i portal`.
+
+**TODO: write instructions on how to connect port, install portal APK and how to run it before starting the service.
 
 ### Architecture (subject to change):
 - FastAPI (Handles 2 main modes: background memory/KG updates + user request processing)
