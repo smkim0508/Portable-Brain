@@ -22,8 +22,6 @@ Your second brain living inside carry-on devices. Memory based on day-to-day [sm
 - Start the Portal application with `adb -s emulator-5554 shell am start-foreground-service com.android.portal/.PortalService`
 - Verify that the Portal app is running with `adb -s emulator-5554 shell dumpsys accessibility | grep -i portal`.
 
-**TODO: write instructions on how to connect port, install portal APK and how to run it before starting the service.
-
 ### Architecture (subject to change):
 - FastAPI (Handles 2 main modes: background memory/KG updates + user request processing)
     - dependencies + lifetime management
