@@ -236,6 +236,13 @@ class DroidRunClient:
     # =====================================================================
 
     @ensure_connected
+    async def get_date(self) -> str:
+        """
+        Retrieves the current time and date on device.
+        """
+        return await self.tools.get_date()
+    
+    @ensure_connected
     async def get_current_state(self) -> Dict[str, Any]:
         """
         Get current device state with UI tree and phone context.

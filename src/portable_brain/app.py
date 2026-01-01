@@ -13,11 +13,13 @@ from portable_brain.common.services.llm_service.llm_client import TypedLLMProtoc
 from portable_brain.agent_service.common.types.test_llm_outputs import TestLLMOutput
 from portable_brain.middleware.logging_middleware import LoggingMiddleware
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
+from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 
 from portable_brain.core.dependencies import (
     get_llm_client,
     get_main_db_engine,
-    get_droidrun_client
+    get_droidrun_client,
+    get_observation_tracker
 )
 
 # disable FastAPI docs for production/deployment
