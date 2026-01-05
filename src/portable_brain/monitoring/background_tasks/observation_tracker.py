@@ -110,6 +110,7 @@ class ObservationTracker:
 
         Returns:
             List of observations
+            NOTE: the bottom index in returned list is the most recent. Possibly reverse indices to fetch most recent on top.
         """
         observations = self.observations
 
@@ -121,6 +122,8 @@ class ObservationTracker:
 
         if limit:
             observations = observations[-limit:]
+        
+        observations.reverse() # make the first observation the most recent
 
         return observations
 
