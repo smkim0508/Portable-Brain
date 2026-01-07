@@ -29,6 +29,8 @@ class ActionSource(str, Enum):
 # NOTE: each action inherits shared metadata from ActionBase class
 
 # TODO: for now, experiment with mostly text messages across three applications, then expand later
+
+# NOTE: the convention for naming should follow src/dst or actor/target depending on relationship
 class AppSwitchAction(GenericActionBase):
     """
     Action for switching between apps.
