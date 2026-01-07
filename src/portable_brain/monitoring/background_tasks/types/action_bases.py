@@ -29,7 +29,7 @@ class InstagramActionBase(ActionBase):
     TODO: expand fields.
     """
     package: str = "com.instagram.android"
-    username: str # actor's username
+    actor_username: str # the device user's current account username
 
 class WhatsAppActionBase(ActionBase):
     """

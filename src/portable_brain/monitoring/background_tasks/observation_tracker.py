@@ -109,8 +109,7 @@ class ObservationTracker:
             if change_type == ChangeType.TEXT_INPUT:
                return InstagramMessageSentAction(
                    timestamp=change["timestamp"],
-                   username=change["username"],
-                   actor_username=change["username"],
+                   actor_username=change["username"], # actor username
                    target_username=change["target_username"],
                    source=change["source"],
                    priority=change["priority"],
@@ -125,7 +124,7 @@ class ObservationTracker:
                return WhatsAppMessageSentAction(
                    timestamp=change["timestamp"],
                    recipient_name=change["name"],
-                   actor_name=change["name"],
+                   is_dm=change["is_dm"],
                    target_name=change["target_name"],
                    source=change["source"],
                    priority=change["priority"],
@@ -142,7 +141,6 @@ class ObservationTracker:
                    workspace_name=change["workspace_name"],
                    channel_name=change["channel_name"],
                    thread_name=change["thread_name"],
-                   recipient_name=change["name"],
                    target_name=change["target_name"],
                    source=change["source"],
                    priority=change["priority"],
