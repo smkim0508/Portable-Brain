@@ -3,6 +3,18 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
+from portable_brain.monitoring.background_tasks.types.actions import (
+    Action,
+    AppSwitchAction,
+    InstagramMessageSentAction,
+    InstagramPostLikedAction,
+    WhatsAppMessageSentAction,
+    SlackMessageSentAction,
+    # TBD
+)
+from portable_brain.monitoring.background_tasks.types.change_types import ChangeType
+from portable_brain.common.types.android_apps import AndroidApp
+from portable_brain.common.logging.logger import logger
 
 class ObservationTracker:
     """
@@ -68,33 +80,80 @@ class ObservationTracker:
 
         return observation
 
-    def _infer_action(self, change: Dict[str, Any]) -> str:
+    def _infer_action(self, change: Dict[str, Any]) -> Optional[Action]:
         """
         Infer what user action likely caused this state change.
+        Returns an Action object or None if action is determined to be unknown.
+        TODO: add more sophisticated logic.
         """
-        change_type = change["change_type"]
-        before = change["before"]
-        after = change["after"]
+        change_type: ChangeType = change["change_type"] # TODO: add change DTO
+        before = change["before"] # states
+        after = change["after"] # states
+        curr_package = before["package"]
 
-        if change_type == "app_switch":
-            return f"switched_from_{before['package']}_to_{after['package']}"
+        if change_type == ChangeType.APP_SWITCH:
+            return AppSwitchAction(
+                timestamp=change["timestamp"],
+                package=after["package"],
+                source=change["source"],
+                priority=change["priority"],
+                description=change["description"],
+                src_package=before["package"],
+                src_activity=before["activity"],
+                dst_package=after["package"],
+                dst_activity=after["activity"],
+            )
 
-        elif change_type == "screen_change":
-            return f"navigated_to_{after['activity']}"
-
-        elif change_type == "major_layout_change":
-            # Could be: dialog opened, form submitted, content loaded
-            if after["element_count"] > before["element_count"]:
-                return "content_expanded"  # e.g., dropdown opened
+        # else, see if current app supports special tracking
+        elif curr_package == AndroidApp.INSTAGRAM:
+            if change_type == ChangeType.TEXT_INPUT:
+               return InstagramMessageSentAction(
+                   timestamp=change["timestamp"],
+                   username=change["username"],
+                   actor_username=change["username"],
+                   target_username=change["target_username"],
+                   source=change["source"],
+                   priority=change["priority"],
+                   description=change["description"],
+                   message_summary=change["message_summary"],
+               )
             else:
-                return "content_collapsed"  # e.g., dialog closed
+                return None
 
-        elif change_type == "minor_layout_change":
-            # Could be: text input, selection change
-            return "ui_interaction"
-
+        elif curr_package == AndroidApp.WHATSAPP:
+            if change_type == ChangeType.TEXT_INPUT:
+               return WhatsAppMessageSentAction(
+                   timestamp=change["timestamp"],
+                   recipient_name=change["name"],
+                   actor_name=change["name"],
+                   target_name=change["target_name"],
+                   source=change["source"],
+                   priority=change["priority"],
+                   description=change["description"],
+                   message_summary=change["message_summary"],
+               )
+            else:
+                return None
+        
+        elif curr_package == AndroidApp.SLACK:
+            if change_type == ChangeType.TEXT_INPUT:
+               return SlackMessageSentAction(
+                   timestamp=change["timestamp"],
+                   workspace_name=change["workspace_name"],
+                   channel_name=change["channel_name"],
+                   thread_name=change["thread_name"],
+                   recipient_name=change["name"],
+                   target_name=change["target_name"],
+                   source=change["source"],
+                   priority=change["priority"],
+                   description=change["description"],
+                   message_summary=change["message_summary"],
+               )
+            else:
+                return None
         else:
-            return "unknown_action"
+            logger.info(f"Unknown action, change type: {change_type}")
+            return None
 
     def get_observations(
         self,
