@@ -277,6 +277,14 @@ class DroidRunClient:
             "raw_tree": raw_tree,
             "timestamp": datetime.now().isoformat(),
         }
+    
+    @ensure_connected
+    async def get_raw_tree(self) -> Dict[str, Any]:
+        """
+        Lightweight function to retrieve just the raw accessibility tree state.
+        """
+        await self.tools.get_state()
+        return {"raw_tree": self.tools.raw_tree_cache}
 
     @ensure_connected
     async def detect_state_change(self) -> Optional[Dict[str, Any]]:
