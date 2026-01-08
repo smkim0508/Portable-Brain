@@ -16,15 +16,6 @@ from portable_brain.monitoring.background_tasks.types.action.action_types import
     SlackActionType
 )
 
-class ActionSource(str, Enum):
-    """
-    Defines the souce of action.
-    Currently supports observations and user-given commands.
-    NOTE: the background observation trakcer should only log observations
-    """
-    OBSERVATION = "observation"
-    COMMAND = "command"
-
 # specific actions, as defined by the types above
 # NOTE: each action inherits shared metadata from ActionBase class
 

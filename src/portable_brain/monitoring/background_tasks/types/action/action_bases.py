@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Union, Literal, Optional
 from enum import Enum
-from portable_brain.monitoring.background_tasks.types.action.actions import ActionSource
+from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import StateChangeSource
 from datetime import datetime, timezone, timedelta
 
 class ActionBase(BaseModel):
@@ -14,7 +14,7 @@ class ActionBase(BaseModel):
     """
     timestamp: datetime
     description: Optional[str] = None # Human-readable description
-    source: ActionSource
+    source: StateChangeSource # propagated from changes in UI state
     priority: float # a score of how important this action is, from 0.0 to 1.0
     # TODO: make this priority field more robust
 
