@@ -152,7 +152,7 @@ fine controls:
 action history:
 - get_action_history (list of actions w/ timestamp, command, state changes)
     - for notable history, can customize ("change_type" in app_switch, screen_change, etc.)
-    - currently, only updated via execute_command. If user navigates UI on their own, it won't be reflected - see observation tracker below for user HCI tracking.
+    - **NOTE:** currently, only updated via execute_command. If user navigates UI on their own, it won't be reflected - see observation tracker below for user HCI tracking.
 - clear_action_history
 
 helpers:
