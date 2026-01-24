@@ -19,6 +19,8 @@ from portable_brain.common.logging.logger import logger
 class ObservationTracker:
     """
     Track ALL device state changes, including manual user actions.
+    - Client refers to the main DroidRunClient instance.
+    - The client's helper are used to detect state changes.
 
     This complements DroidRunClient.action_history which only tracks
     execute_command() actions.
@@ -54,10 +56,12 @@ class ObservationTracker:
                     # Store observation
                     self.observations.append(observation)
 
-                    # Optional: Send to memory handler immediately
+                    # TODO: should be handled by memory handler in future
                     # await self.memory_handler.process_observation(observation)
-
-                await asyncio.sleep(poll_interval)
+                    # shorter cooldown if state change HAS been found -> likely another action might pursue
+                    await asyncio.sleep(0.2)
+                else:
+                    await asyncio.sleep(poll_interval) # cooldown after each iteration
 
             except Exception as e:
                 print(f"Observation tracking error: {e}")
@@ -68,6 +72,8 @@ class ObservationTracker:
         Create observation record from state change.
 
         Infers what action likely occurred based on the change type.
+
+        TODO: use canonical UI state DTOs
         """
         observation = {
             "timestamp": datetime.now().isoformat(),
@@ -114,7 +120,7 @@ class ObservationTracker:
                    source=change["source"],
                    importance=change["importance"],
                    description=change["description"],
-                   message_summary=change["message_summary"],
+                   message_summary=change["message_summary"], # should use UI states diff to infer message summary w/ LLM
                )
             else:
                 return None
