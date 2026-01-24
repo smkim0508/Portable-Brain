@@ -65,3 +65,24 @@ async def get_raw_accessibility_tree(
     except Exception as e:
         logger.error(f"Error fetching raw accessibility tree: {e}")
         return {"message": f"Error fetching raw accessibility tree: {e}"}, 500
+
+@router.get("/get-droidrun-state")
+async def get_droidrun_state(
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client)
+):
+    """
+    Gets the raw UI state given by DroidRun SDK.
+    """
+    try:
+        logger.info("Fetching raw UI state from current screen")
+        state = await droidrun_client.get_raw_state()
+        raw_tree = await droidrun_client.get_raw_tree()
+
+        return {
+            "message": "Successfully retrieved raw accessibility tree",
+            "raw_state": state
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching raw UI state: {e}")
+        return {"message": f"Error fetching raw UI state from DroidRun: {e}"}, 500
