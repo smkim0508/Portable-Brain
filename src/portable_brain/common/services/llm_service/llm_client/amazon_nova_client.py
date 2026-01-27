@@ -1,5 +1,6 @@
 # Amazon NOVA Client
 import os
+import json
 from openai import AsyncOpenAI # Nova Model uses OpenAI's API Schema
 from typing import Type
 from pydantic import BaseModel, ValidationError
@@ -11,9 +12,32 @@ from .protocols import RateLimitProvider
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-# NOTE: this uses the public Gemini API with an API key, not Vertex AI.
+# helper to format Pydantic's JSON properties into a clean format ready for Nova Client
+def format_json_schema(properties: dict) -> str:
+    # Map JSON schema types to Python type names
+        type_mapping = {
+            "boolean": "bool",
+            "string": "str", 
+            "integer": "int",
+            "number": "float",
+            "array": "list",
+            "object": "dict"
+        }
+
+        # Create clean format string
+        format_lines = ["{"]
+        for field, info in properties.items():
+            json_type = info.get("type", "value")
+            python_type = type_mapping.get(json_type, json_type)
+            format_lines.append(f'  "{field}": {python_type}')
+        format_lines.append("}")
+
+        clean_format = "\n".join(format_lines)
+        return clean_format
+    
 # Set up this client with API key during app initialization
-# TODO: "strict" JSON/Pydantic output is only supported for Vertex AI clients; set up manual validation to catch malformed JSON outputs before crashing Pydantic validation, or loosen validation.
+# TODO: "strict" JSON/Pydantic output is only supported for Enterprise-level Nova LLM clients; set up manual validation to catch malformed JSON outputs before crashing Pydantic validation, or loosen validation.
+# NOTE: The output schema must be enforced using the system prompt, so we automatically bake parsed Pydantic schema into the system prompt
 class AsyncAmazonNovaTypedClient(TypedLLMProtocol, ProvidesProviderInfo):
     def __init__(
         self,
@@ -49,6 +73,19 @@ class AsyncAmazonNovaTypedClient(TypedLLMProtocol, ProvidesProviderInfo):
 
         last_exception = None
         attempt_count = 0
+        
+        # Get schema from Pydantic model
+        schema = response_model.model_json_schema()
+        properties = schema.get("properties", {})
+        # format into clean structure ready for Nova
+        clean_format = format_json_schema(properties)
+
+        # construct guided system prompt w/ JSON schema, then append to provided system prompt
+        schema_guide_prompt = f"""
+        You must respond with valid JSON only, in exactly this format:
+        {clean_format}
+        """
+        guided_system_prompt = f"{system_prompt}\n\n{schema_guide_prompt}"
 
         async for attempt in self.retryer:
             attempt_count += 1
@@ -57,7 +94,7 @@ class AsyncAmazonNovaTypedClient(TypedLLMProtocol, ProvidesProviderInfo):
                     resp = await self.client.chat.completions.create(
                         model=self.model_name,
                         messages=[
-                            {"role": "system", "content": system_prompt},
+                            {"role": "system", "content": guided_system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
                         response_format={"type": "json_object"}, # enforces JSON mode
@@ -67,6 +104,16 @@ class AsyncAmazonNovaTypedClient(TypedLLMProtocol, ProvidesProviderInfo):
                     # Extract content from OpenAI response structure
                     content = resp.choices[0].message.content
                     if content and isinstance(content, str) and content.strip():
+                        # Strip markdown code fences if present
+                        content = content.strip()
+                        if content.startswith("```"):
+                            # Remove opening fence (```json or ````)
+                            content = content.split("\n", 1)[1] if "\n" in content else content
+                            # Remove closing fence
+                            if content.endswith("```"):
+                                content = content.rsplit("```", 1)[0]
+                            content = content.strip()
+
                         # Manually validate the JSON string against the Pydantic model
                         return response_model.model_validate_json(content)
 
