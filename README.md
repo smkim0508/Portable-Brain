@@ -1,6 +1,5 @@
 # Portable-Brain
-Your second brain living inside carry-on devices. Memory based on day-to-day [smartphone] HCI observations & habits.
-- Context extracted from low-level HCI signals.
+Your second brain living inside carry-on devices. Memory and context orchestration based on day-to-day [smartphone] HCI observations & habits (derived from low-level signals).
 
 ### How to Run (Locally):
 - Use uvicorn + FastAPI set up to run the service locally.
@@ -8,7 +7,7 @@ Your second brain living inside carry-on devices. Memory based on day-to-day [sm
 
 ### DroidRun Client Connection
 - Initialize set up with `droidrun setup` in terminal (one-time).
-- Create a android virtual device (avd) - easiest to use Android Studio application.
+- Create an android virtual device (avd) - easiest to use Android Studio application.
 - Start the android emulator with `emulator -avd <your_avd_name>`.
 - Verify ADB connection with `adb devices` - emulator-5554 device should show up.
 - Set up TCP forwarding (for local development w/ emulated android device) using `adb forward tcp:8001 tcp:8001`.
@@ -75,6 +74,7 @@ helpers:
 
 
 **TODO: need a way to cleanly get metadata from UI states when referencing UI changes for specific apps. E.g. need to somehow store "username" for instagram UI changes so that it can be referenced in app.
+- complete create_observation() helper
 
 
 ### Autonomous NL Query Eecution
