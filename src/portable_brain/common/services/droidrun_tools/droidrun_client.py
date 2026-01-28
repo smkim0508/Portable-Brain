@@ -243,6 +243,13 @@ class DroidRunClient:
         return await self.tools.get_date()
     
     @ensure_connected
+    async def get_raw_state(self):
+        """
+        Retrieves raw state from device.
+        """
+        return await self.tools.get_state()
+    
+    @ensure_connected
     async def get_current_state(self) -> Dict[str, Any]:
         """
         Get current device state with UI tree and phone context.
@@ -289,16 +296,14 @@ class DroidRunClient:
     @ensure_connected
     async def detect_state_change(self) -> Optional[Dict[str, Any]]:
         """
-        Check if device state has changed since last check.
+        Check if device state has changed since last check and return the change.
 
         Returns:
-            None if no change, otherwise dict with:
-                - change_type: str ('app_switch', 'screen_change', 'layout_change', 'minor')
-                - before: Dict (previous state summary)
-                - after: Dict (current state summary)
-                - timestamp: str (ISO format)
+        The UI State Change or None if no change TODO: should be represented with canonical StateChange DTOs.
 
         Use this for continuous monitoring in background tasks.
+        NOTE: this is the primary method called by observation tracker to detect state changes and use state.
+        TODO: This should reflect using canonical UI State DTOs.
         """
         current_state = await self.tools.get_state()
 

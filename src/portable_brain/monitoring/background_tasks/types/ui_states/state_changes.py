@@ -26,3 +26,5 @@ class UIStateChange(BaseModel):
     before: UIState
     after: UIState
     source: StateChangeSource
+    description: Optional[str] = None # some human-readable description about this change
+    # importance score is set based on action, not inherently tied to an UI change.

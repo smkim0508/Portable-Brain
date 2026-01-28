@@ -13,7 +13,7 @@ class ActionBase(BaseModel):
     - App-specific action bases inherit from this base with specific protocols.
     """
     timestamp: datetime
-    description: Optional[str] = None # Human-readable description
+    description: Optional[str] = None # human-readable description
     source: StateChangeSource # propagated from changes in UI state
     importance: float # a score of how important this action is, from 0.0 to 1.0
     # TODO: make this priority field more robust
