@@ -76,7 +76,7 @@ class ObservationTracker:
 
     def _infer_action(self, change: UIStateChange) -> Action:
         """
-        Infer a user action from recorded UI state change.
+        Infers a user action from recorded UI state change via rule-based classification.
         Returns an Action object, based on change type and state metadata.
         Returns UnknownAction if action can't be inferred.
         """
@@ -85,10 +85,11 @@ class ObservationTracker:
         change_type: StateChangeType = change.change_type
         before: UIState = change.before # states
         after: UIState = change.after # states
-        curr_package: str = before.package
+        curr_package: str = before.package # the current app is treated as the package BEFORE change
 
         # TODO: infer all actions based on each change type and state metadata
         if change.change_type == StateChangeType.APP_SWITCH:
+            logger.info(f"inferred app switch action from change type: {change_type} and package: {before.package} to {after.package}")
             return AppSwitchAction(
                 timestamp=change.timestamp,
                 source_change_type=change.change_type,
@@ -104,6 +105,7 @@ class ObservationTracker:
         # else, see if current app is supported
         elif curr_package == AndroidApp.INSTAGRAM:
             if change_type == StateChangeType.TEXT_INPUT:
+                logger.info(f"inferred Instagram message sent action from change type: {change_type} and package: {curr_package}")
                 return InstagramMessageSentAction(
                     timestamp=change.timestamp,
                     source_change_type=change.change_type,
@@ -118,6 +120,7 @@ class ObservationTracker:
 
         elif curr_package == AndroidApp.WHATSAPP:
             if change_type == StateChangeType.TEXT_INPUT:
+                logger.info(f"inferred WhatsApp message sent action from change type: {change_type} and package: {curr_package}")
                 return WhatsAppMessageSentAction(
                     timestamp=change.timestamp,
                     source_change_type=change.change_type,
@@ -133,6 +136,7 @@ class ObservationTracker:
         
         elif curr_package == AndroidApp.SLACK:
             if change_type == StateChangeType.TEXT_INPUT:
+                logger.info(f"inferred Slack message sent action from change type: {change_type} and package: {curr_package}")
                 return SlackMessageSentAction(
                     timestamp=change.timestamp,
                     source_change_type=change.change_type,
@@ -148,6 +152,7 @@ class ObservationTracker:
             # otherwise no other actions are supported for Slack, so return unknown
 
         # if action can't be inferred, return UnknownAction 
+        logger.info(f"Unable to infer action from change type: {change_type} and package: {curr_package}")
         return UnknownAction(
             timestamp=change.timestamp,
             source_change_type=change.change_type,
@@ -163,76 +168,7 @@ class ObservationTracker:
         This is a high-level abstraction derived from a union of low-level actions.
         NOTE: observation is what's ultimately stored in the memory.
         """
-        change_type: StateChangeType = change["change_type"] # TODO: add change DTO
-        before = change["before"] # states
-        after = change["after"] # states
-        curr_package = before["package"]
-
-        if change_type == StateChangeType.APP_SWITCH:
-            return AppSwitchAction(
-                timestamp=change["timestamp"],
-                source_change_type=change_type,
-                package=after["package"],
-                source=change["source"],
-                importance=change["importance"],
-                description=change["description"],
-                src_package=before["package"],
-                src_activity=before["activity"],
-                dst_package=after["package"],
-                dst_activity=after["activity"],
-            )
-
-        # else, see if current app supports special tracking
-        elif curr_package == AndroidApp.INSTAGRAM:
-            if change_type == StateChangeType.TEXT_INPUT:
-               return InstagramMessageSentAction(
-                   timestamp=change["timestamp"],
-                   source_change_type=change["change_type"],
-                   actor_username=change["username"], # actor username
-                   target_username=change["target_username"],
-                   source=change["source"],
-                   importance=change["importance"],
-                   description=change["description"],
-                   message_summary=change["message_summary"], # should use UI states diff to infer message summary w/ LLM
-               )
-            else:
-                return None
-
-        elif curr_package == AndroidApp.WHATSAPP:
-            if change_type == StateChangeType.TEXT_INPUT:
-               return WhatsAppMessageSentAction(
-                   timestamp=change["timestamp"],
-                   source_change_type=change["change_type"],
-                   recipient_name=change["name"],
-                   is_dm=change["is_dm"],
-                   target_name=change["target_name"],
-                   source=change["source"],
-                   importance=change["importance"],
-                   description=change["description"],
-                   message_summary=change["message_summary"],
-               )
-            else:
-                return None
-        
-        elif curr_package == AndroidApp.SLACK:
-            if change_type == StateChangeType.TEXT_INPUT:
-               return SlackMessageSentAction(
-                   timestamp=change["timestamp"],
-                   source_change_type=change["change_type"],
-                   workspace_name=change["workspace_name"],
-                   channel_name=change["channel_name"],
-                   thread_name=change["thread_name"],
-                   target_name=change["target_name"],
-                   source=change["source"],
-                   importance=change["importance"],
-                   description=change["description"],
-                   message_summary=change["message_summary"],
-               )
-            else:
-                return None
-        else:
-            logger.info(f"Unknown action, change type: {change_type}")
-            return None
+        pass
 
     def get_observations(
         self,
