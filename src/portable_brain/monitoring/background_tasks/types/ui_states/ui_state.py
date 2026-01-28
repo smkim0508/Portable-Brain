@@ -22,6 +22,7 @@ class UIState(BaseModel):
     state_id: str
     package: str # which app am I on?
     activity: UIActivity # which screen within the app am I on?
-    ui_elements: list
+    ui_elements: list # TODO: list of ?
     focused_element: Optional[int] = None # the currently selected element, by idx
+    raw_tree: Optional[str] = None
     raw_tree_hash: Optional[str] = None # optionally, to keep track of any additional info

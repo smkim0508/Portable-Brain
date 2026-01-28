@@ -3,6 +3,14 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
+from portable_brain.common.types.android_apps import AndroidApp
+from portable_brain.common.logging.logger import logger
+
+# Canonical DTOs for UI state, inferred action, observations
+from portable_brain.monitoring.background_tasks.types.ui_states.ui_state import UIState, UIActivity
+from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import UIStateChange, StateChangeSource
+from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType
+from portable_brain.monitoring.background_tasks.types.action.action_types import ActionType
 from portable_brain.monitoring.background_tasks.types.action.actions import (
     Action,
     AppSwitchAction,
@@ -12,9 +20,6 @@ from portable_brain.monitoring.background_tasks.types.action.actions import (
     SlackMessageSentAction,
     # TBD
 )
-from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType
-from portable_brain.common.types.android_apps import AndroidApp
-from portable_brain.common.logging.logger import logger
 
 class ObservationTracker:
     """

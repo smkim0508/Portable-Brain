@@ -15,3 +15,5 @@ class StateChangeType(str, Enum):
     SCREEN_NAVIGATION = "screen_navigation"
     CONTENT_NAVIGATION = "content_navigation"
     TEXT_INPUT = "text_input"
+    NO_CHANGE = "no_change"
+    UNKNOWN = "unknown"

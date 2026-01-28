@@ -21,6 +21,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 from functools import wraps
+import uuid
 
 # DroidRun SDK imports
 from droidrun import DroidAgent, AdbTools, DroidrunConfig, DeviceConfig, AgentConfig
@@ -29,8 +30,23 @@ from droidrun import load_llm
 
 # settings
 from portable_brain.config.app_config import get_service_settings
-
+# logging
 from portable_brain.common.logging.logger import logger
+
+# Canonical DTOs for UI state, inferred action, observations
+from portable_brain.monitoring.background_tasks.types.ui_states.ui_state import UIState, UIActivity
+from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import UIStateChange, StateChangeSource
+from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType
+from portable_brain.monitoring.background_tasks.types.action.action_types import ActionType
+from portable_brain.monitoring.background_tasks.types.action.actions import (
+    Action,
+    AppSwitchAction,
+    InstagramMessageSentAction,
+    InstagramPostLikedAction,
+    WhatsAppMessageSentAction,
+    SlackMessageSentAction,
+    # TBD
+)
 
 def ensure_connected(func):
     """
@@ -120,7 +136,7 @@ class DroidRunClient:
         )
 
         # Track last known state for change detection
-        self.last_state: Optional[Tuple] = None
+        self.last_state: UIState | None = None
         self.action_history: List[Dict[str, Any]] = []
 
         self._connected = False
@@ -136,12 +152,13 @@ class DroidRunClient:
             await self.tools.connect()
 
             # Test connection with ping
-            state = await self.tools.get_state()
+            raw_state = await self.tools.get_state()
+            state = self._format_raw_ui_state(raw_state)
             self.last_state = state
             self._connected = True
 
             logger.info(f"Connected to device {self.device_serial}")
-            logger.info(f"Current app: {state[3].get('packageName', 'Unknown')}")
+            logger.info(f"Current app package: {state.package}")
 
             return True
 
@@ -192,7 +209,8 @@ class DroidRunClient:
             raise ValueError("LLM instance required for execute_command() - OBSERVATION ONLY MODE.")
 
         # Capture state before execution
-        state_before = await self.tools.get_state()
+        state_before_raw = await self.tools.get_state()
+        state_before = self._format_raw_ui_state(state_before_raw)
 
         # Configure agent
         agent_config = AgentConfig(reasoning=reasoning)
@@ -212,17 +230,19 @@ class DroidRunClient:
         result = await agent.run()
 
         # Capture state after execution
-        state_after = await self.tools.get_state()
+        state_after_raw = await self.tools.get_state()
+        state_after = self._format_raw_ui_state(state_after_raw)
 
         # Record action for memory agent
+        # TODO: use DTO instead of serializing state
         action_record = {
             "timestamp": datetime.now().isoformat(),
             "command": enriched_command,
             "success": result.success,
             "reason": result.reason,
             "steps": result.steps,
-            "state_before": self._serialize_state(state_before),
-            "state_after": self._serialize_state(state_after),
+            "state_before": self._serialize_state(state_before_raw), # needs change
+            "state_after": self._serialize_state(state_after_raw), # needs change
             "change_type": self._classify_change(state_before, state_after),
         }
 
@@ -305,7 +325,10 @@ class DroidRunClient:
         NOTE: this is the primary method called by observation tracker to detect state changes and use state.
         TODO: This should reflect using canonical UI State DTOs.
         """
-        current_state = await self.tools.get_state()
+        # TODO: wrap droidrun's state w/ canonical UI state DTO
+        current_state_raw = await self.tools.get_state()
+        # use helper to format raw state into DTO
+        current_state = self._format_raw_ui_state(current_state_raw)
 
         if self.last_state is None:
             self.last_state = current_state
@@ -313,13 +336,14 @@ class DroidRunClient:
 
         change_type = self._classify_change(self.last_state, current_state)
 
-        if change_type == "no_change":
+        if change_type == StateChangeType.NO_CHANGE:
             return None
 
         change_event = {
             "change_type": change_type,
-            "before": self._serialize_state(self.last_state),
-            "after": self._serialize_state(current_state),
+            # NOTE: may need changes to this
+            "before": self.last_state,
+            "after": current_state,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -474,7 +498,33 @@ class DroidRunClient:
     # =====================================================================
     # HELPER METHODS
     # =====================================================================
+    
+    def _format_raw_ui_state(self, raw_state: Tuple) -> UIState:
+        """
+        Takes a raw state tuple and formats it into a string.
+        - Hashes the state for efficient storage (TBD)
+        Args:
+            raw_state: Raw state tuple
+        Returns:
+            Formatted UI state DTO
+        """
+        raw_tree = self.tools.raw_tree_cache
+        # TODO: make a hash w/ this tree
+        # TODO: make a hash of the raw UI state, check history to fetch state_id if exists or make new.
+        # for now, just make a new state_id for each UI state, regardless of duplicates.
 
+        state_id = str(uuid.uuid4())
+        current_state = UIState(
+            state_id=state_id,
+            package=raw_state[3]["packageName"],
+            activity=raw_state[3]["activity"],
+            ui_elements=raw_state[2],
+            focused_element=int(raw_state[1]),
+            raw_tree=raw_tree,
+        )
+
+        return current_state
+    
     def _serialize_state(self, state: Tuple) -> Dict[str, Any]:
         """
         Convert state tuple to serializable dict.
@@ -492,48 +542,47 @@ class DroidRunClient:
             "focused": state[1] if state[1] else None,
         }
 
-    def _classify_change(self, before: Tuple, after: Tuple) -> str:
+    def _classify_change(self, before: UIState, after: UIState) -> StateChangeType:
         """
         Classify type of UI change between two states.
 
         Returns:
-            'no_change', 'app_switch', 'screen_change', 'major_layout_change',
-            'minor_layout_change', or 'scroll_or_animation'
+            An enum for the change type:
+            'no_change', 'app_switch', 'screen_change', 'major_layout_change', 'unknown',
+            'minor_layout_change', 'content_navigation', 'screen_navigation', 'text_input'
         """
-        if not before or not after or len(before) < 4 or len(after) < 4:
-            return "unknown"
 
-        before_pkg = before[3].get("packageName", "")
-        after_pkg = after[3].get("packageName", "")
+        before_pkg = before.package
+        after_pkg = after.package
 
         # No change
         if (
-            before_pkg == after_pkg
-            and before[3].get("currentApp") == after[3].get("currentApp")
-            and len(before[2]) == len(after[2])
+            before_pkg == after_pkg and \
+            before.activity == after.activity and \
+            before.focused_element == after.focused_element
+            # NOTE: add more conditions to compare, or simply compare two UIStates ==
         ):
-            return "no_change"
+            return StateChangeType.NO_CHANGE
 
         # App switch
         if before_pkg != after_pkg:
-            return "app_switch"
+            return StateChangeType.APP_SWITCH
 
         # Screen change (different activity)
-        if before[3].get("currentApp") != after[3].get("currentApp"):
-            return "screen_change"
+        if before.activity != after.activity:
+            return StateChangeType.SCREEN_CHANGE
 
         # Element count change
-        before_count = len(before[2])
-        after_count = len(after[2])
+        before_count = len(before.ui_elements)
+        after_count = len(after.ui_elements)
         diff = abs(before_count - after_count)
 
         if diff > 20:
-            return "major_layout_change"
+            return StateChangeType.MAJOR_LAYOUT_CHANGE
         elif diff > 5:
-            return "minor_layout_change"
+            return StateChangeType.MINOR_LAYOUT_CHANGE
         else:
-            return "scroll_or_animation"
-
+            return StateChangeType.CONTENT_NAVIGATION # navigation is currently just in between major/minor screen changes.
 
 # =====================================================================
 # USAGE EXAMPLES
