@@ -68,13 +68,14 @@ helpers:
 
 **LAST COMPLETION
 3. The inferred action, alongside UI change diffs, is stored as a final observation (i.e. the nodes of memory representation).
-    - TODO: the final observation should be universal for both observed/inferred actions and actually executed commands by DroidRun Agent (TBD in future).
+    - TODO: the final observation should be universal for both observed/inferred actions and actions actually executed via commands from DroidRun Agent (TBD in future).
     - i.e. the observation should also become a DTO, just a wrapper to hold both the action (whether inferred or executed by user command) + ui state change (a.k.a. the outcome of action), and any supporting metadata.
 **The above hierarchy of observations, state changes, actions, will help to keep a clean history of HCI data log.
 
 
 **TODO: need a way to cleanly get metadata from UI states when referencing UI changes for specific apps. E.g. need to somehow store "username" for instagram UI changes so that it can be referenced in app.
 - complete create_observation() helper
+- complete filling in all inferred_action pathways
 
 
 ### Autonomous NL Query Eecution
