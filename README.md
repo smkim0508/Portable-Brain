@@ -71,10 +71,14 @@ helpers:
     - i.e. the observation should also become a DTO, just a wrapper to hold both the action (whether inferred or executed by user command) + ui state change (a.k.a. the outcome of action), and any supporting metadata.
 **The above hierarchy of observations, state changes, actions, will help to keep a clean history of HCI data log.
 
+### Autonomous NL Query Eecution
+- The service currently supports both Google GenAI client and Amazon Nova models.
+- Current stage of autonomous execution is provided by the DroidRun client, which navigates and handles natural language query.
+- TBD: memory service will eventually hold autonomous execution pipelines to handle processing on top of droidrun.
+
 #### TODO:
 - Experiment with Portal APK client for data parsing, implement filters
 - Test natural language query capabilities for DroidRun Agent (w/ "Kevin" example)
-
 
 ### Architecture (subject to change):
 - FastAPI (Handles 2 main modes: background memory/KG updates + user request processing)
