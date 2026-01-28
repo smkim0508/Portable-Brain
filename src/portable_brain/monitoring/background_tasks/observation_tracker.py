@@ -170,13 +170,47 @@ class ObservationTracker:
         """
         pass
 
+    def get_inferred_actions(
+        self,
+        limit: Optional[int] = None,
+        change_types: Optional[list[StateChangeType]] = None,
+    ) -> List[Action]:
+        """
+        Get inferred actions history.
+
+        Args:
+            limit: Max observations to return
+            change_types: Filter by change type enums.
+
+        Returns:
+            List of observations
+            NOTE: the bottom index in returned list is the most recent, so return is reversed.
+        """
+        inferred_actions = self.inferred_actions
+
+        # optional filtering by change type
+        if change_types:
+            inferred_actions = [
+                action for action in inferred_actions
+                if action.source_change_type in set(change_types)
+            ]
+
+        # optional filtering by number of actions limit
+        if limit:
+            inferred_actions = inferred_actions[-limit:] # takes the last limit number of inferred actions
+        
+        inferred_actions.reverse() # make the first observation the most recent
+
+        return inferred_actions
+
     def get_observations(
         self,
         limit: Optional[int] = None,
-        change_types: Optional[List[str]] = None,
+        change_types: Optional[list[StateChangeType]] = None,
     ) -> List[Action]:
         """
         Get observation history.
+        NOTE: this helper needs refactoring to correctly return observations, not inferred actions
 
         Args:
             limit: Max observations to return
@@ -191,7 +225,7 @@ class ObservationTracker:
         if change_types:
             observations = [
                 o for o in observations
-                if o.source_change_type in change_types
+                if o.source_change_type in set(change_types)
             ]
 
         if limit:
