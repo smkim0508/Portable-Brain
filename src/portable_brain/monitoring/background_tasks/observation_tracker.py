@@ -14,6 +14,7 @@ from portable_brain.monitoring.background_tasks.types.action.action_types import
 from portable_brain.monitoring.background_tasks.types.action.actions import (
     Action,
     AppSwitchAction,
+    UnknownAction,
     InstagramMessageSentAction,
     InstagramPostLikedAction,
     WhatsAppMessageSentAction,
@@ -36,7 +37,8 @@ class ObservationTracker:
 
     def __init__(self, client: DroidRunClient):
         self.client = client
-        self.observations: List[Dict[str, Any]] = []
+        self.inferred_actions: List[Action] = []
+        # TODO: add observations that feed to memory handler
         self.running = False
         self._tracking_task: Optional[asyncio.Task] = None
 
@@ -52,14 +54,14 @@ class ObservationTracker:
         while self.running:
             try:
                 # Detect any state change
-                change = await self.client.detect_state_change()
+                change: UIStateChange | None = await self.client.detect_state_change()
 
                 if change:
                     # Infer what action might have caused this change
-                    observation = self._create_observation(change)
+                    inferred_action = self._infer_action(change)
 
-                    # Store observation
-                    self.observations.append(observation)
+                    # Store inferred actions
+                    self.inferred_actions.append(inferred_action)
 
                     # TODO: should be handled by memory handler in future
                     # await self.memory_handler.process_observation(observation)
@@ -72,30 +74,94 @@ class ObservationTracker:
                 print(f"Observation tracking error: {e}")
                 await asyncio.sleep(5)  # Back off on error
 
-    def _create_observation(self, change: Dict[str, Any]) -> Dict[str, Any]:
+    def _infer_action(self, change: UIStateChange) -> Action:
         """
-        Create observation record from state change.
-
-        Infers what action likely occurred based on the change type.
-
-        TODO: use canonical UI state DTOs
+        Infer a user action from recorded UI state change.
+        Returns an Action object, based on change type and state metadata.
+        Returns UnknownAction if action can't be inferred.
         """
-        observation = {
-            "timestamp": datetime.now().isoformat(),
-            "change_type": change["change_type"],
-            "before": change["before"],
-            "after": change["after"],
-            "inferred_action": self._infer_action(change),
-            "source": "observation",  # vs "command" from execute_command
-        }
 
-        return observation
+        # parse change
+        change_type: StateChangeType = change.change_type
+        before: UIState = change.before # states
+        after: UIState = change.after # states
+        curr_package: str = before.package
 
-    def _infer_action(self, change: Dict[str, Any]) -> Optional[Action]:
+        # TODO: infer all actions based on each change type and state metadata
+        if change.change_type == StateChangeType.APP_SWITCH:
+            return AppSwitchAction(
+                timestamp=change.timestamp,
+                source_change_type=change.change_type,
+                package=change.after.package,
+                source=change.source,
+                description=change.description,
+                src_package=change.before.package,
+                src_activity=change.before.activity,
+                dst_package=change.after.package,
+                dst_activity=change.after.activity,
+            )
+
+        # else, see if current app is supported
+        elif curr_package == AndroidApp.INSTAGRAM:
+            if change_type == StateChangeType.TEXT_INPUT:
+                return InstagramMessageSentAction(
+                    timestamp=change.timestamp,
+                    source_change_type=change.change_type,
+                    actor_username=change.after.raw_tree.get("username", "unknown user") if change.after.raw_tree else "unknown user", # actor username
+                    target_username=change.after.raw_tree.get("target_username", "unknown user") if change.after.raw_tree else "unknown user", # target username
+                    source=change.source,
+                    # importance is set to default 1.0 for now
+                    description=change.description,
+                    message_summary=None, # should use UI states diff to infer message summary w/ LLM
+                )
+            # otherwise no other actions are supported for Instagram, so return unknown
+
+        elif curr_package == AndroidApp.WHATSAPP:
+            if change_type == StateChangeType.TEXT_INPUT:
+                return WhatsAppMessageSentAction(
+                    timestamp=change.timestamp,
+                    source_change_type=change.change_type,
+                    recipient_name=change.after.raw_tree.get("recipient_name", "unknown user") if change.after.raw_tree else "unknown user",
+                    is_dm=change.after.raw_tree.get("is_dm", False) if change.after.raw_tree else False,
+                    target_name=change.after.raw_tree.get("target_name", "unknown user") if change.after.raw_tree else "unknown user",
+                    source=change.source,
+                    # importance is set to default 1.0 for now
+                    description=change.description,
+                    message_summary=None,
+                )
+            # otherwise no other actions are supported for WhatsApp, so return unknown
+        
+        elif curr_package == AndroidApp.SLACK:
+            if change_type == StateChangeType.TEXT_INPUT:
+                return SlackMessageSentAction(
+                    timestamp=change.timestamp,
+                    source_change_type=change.change_type,
+                    workspace_name=change.after.raw_tree.get("workspace_name", "unknown workspace") if change.after.raw_tree else "unknown workspace",
+                    channel_name=change.after.raw_tree.get("channel_name", "unknown channel") if change.after.raw_tree else "unknown channel",
+                    thread_name=change.after.raw_tree.get("thread_name", None) if change.after.raw_tree else None,
+                    target_name=change.after.raw_tree.get("target_name", "unknown user") if change.after.raw_tree else "unknown user",
+                    source=change.source,
+                    # importance is set to default 1.0 for now
+                    description=change.description,
+                    message_summary=None,
+                )
+            # otherwise no other actions are supported for Slack, so return unknown
+
+        # if action can't be inferred, return UnknownAction 
+        return UnknownAction(
+            timestamp=change.timestamp,
+            source_change_type=change.change_type,
+            package=change.after.package,
+            source=change.source,
+            importance=0.0, # TEMP: for unknown actions, we override importance to 0.0
+            description=change.description,
+        )
+
+    def _create_observation(self, change: Dict[str, Any]) -> Optional[Action]:
         """
-        Infer what user action likely caused this state change.
-        Returns an Action object or None if action is determined to be unknown.
-        TODO: add more sophisticated logic.
+        Creates the final observation object based on the action dictionary.
+        This is a high-level abstraction derived from a union of low-level actions.
+        NOTE: observation is what's ultimately stored in the memory.
         """
         change_type: StateChangeType = change["change_type"] # TODO: add change DTO
         before = change["before"] # states
@@ -105,6 +171,7 @@ class ObservationTracker:
         if change_type == StateChangeType.APP_SWITCH:
             return AppSwitchAction(
                 timestamp=change["timestamp"],
+                source_change_type=change_type,
                 package=after["package"],
                 source=change["source"],
                 importance=change["importance"],
@@ -120,6 +187,7 @@ class ObservationTracker:
             if change_type == StateChangeType.TEXT_INPUT:
                return InstagramMessageSentAction(
                    timestamp=change["timestamp"],
+                   source_change_type=change["change_type"],
                    actor_username=change["username"], # actor username
                    target_username=change["target_username"],
                    source=change["source"],
@@ -134,6 +202,7 @@ class ObservationTracker:
             if change_type == StateChangeType.TEXT_INPUT:
                return WhatsAppMessageSentAction(
                    timestamp=change["timestamp"],
+                   source_change_type=change["change_type"],
                    recipient_name=change["name"],
                    is_dm=change["is_dm"],
                    target_name=change["target_name"],
@@ -149,6 +218,7 @@ class ObservationTracker:
             if change_type == StateChangeType.TEXT_INPUT:
                return SlackMessageSentAction(
                    timestamp=change["timestamp"],
+                   source_change_type=change["change_type"],
                    workspace_name=change["workspace_name"],
                    channel_name=change["channel_name"],
                    thread_name=change["thread_name"],
@@ -168,7 +238,7 @@ class ObservationTracker:
         self,
         limit: Optional[int] = None,
         change_types: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Action]:
         """
         Get observation history.
 
@@ -180,12 +250,12 @@ class ObservationTracker:
             List of observations
             NOTE: the bottom index in returned list is the most recent. Possibly reverse indices to fetch most recent on top.
         """
-        observations = self.observations
+        observations = self.inferred_actions
 
         if change_types:
             observations = [
                 o for o in observations
-                if o["change_type"] in change_types
+                if o.source_change_type in change_types
             ]
 
         if limit:
@@ -197,7 +267,7 @@ class ObservationTracker:
 
     def clear_observations(self):
         """Clear observation history after persisting to DB."""
-        self.observations = []
+        self.inferred_actions = []
 
     def start_background_tracking(self, poll_interval: float = 1.0):
         """

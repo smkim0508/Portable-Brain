@@ -314,7 +314,7 @@ class DroidRunClient:
         return {"raw_tree": self.tools.raw_tree_cache}
 
     @ensure_connected
-    async def detect_state_change(self) -> Optional[Dict[str, Any]]:
+    async def detect_state_change(self) -> UIStateChange | None:
         """
         Check if device state has changed since last check and return the change.
 
@@ -338,14 +338,15 @@ class DroidRunClient:
 
         if change_type == StateChangeType.NO_CHANGE:
             return None
-
-        change_event = {
-            "change_type": change_type,
-            # NOTE: may need changes to this
-            "before": self.last_state,
-            "after": current_state,
-            "timestamp": datetime.now().isoformat(),
-        }
+        
+        change_event = UIStateChange(
+            timestamp=datetime.now(),
+            change_type=change_type,
+            before=self.last_state,
+            after=current_state,
+            source=StateChangeSource.OBSERVATION,
+            description=None # NOTE: to be added w/ LLM summarization, only on core changes or w/ hashed look-up
+        )
 
         self.last_state = current_state
         return change_event
@@ -583,89 +584,5 @@ class DroidRunClient:
             return StateChangeType.MINOR_LAYOUT_CHANGE
         else:
             return StateChangeType.CONTENT_NAVIGATION # navigation is currently just in between major/minor screen changes.
-
-# =====================================================================
-# USAGE EXAMPLES
-# =====================================================================
-
-async def example_high_level_execution():
-    """Example: Execute enriched commands from memory agent."""
-    from droidrun import load_llm
-
-    GOOGLE_API_KEY = get_service_settings().GOOGLE_GENAI_API_KEY
-
-    # Load LLM (same as your memory agent uses)
-    llm = load_llm(provider_name="GoogleGenAI", model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY)
-
-    # Initialize client
-    client = DroidRunClient(
-        device_serial="emulator-5554",
-        use_tcp=True,
-        llm_instance=llm,
-    )
-
-    # Connect to device
-    await client.connect()
-
-    # Execute enriched command (from your memory agent)
-    result = await client.execute_command(
-        enriched_command="Open Messages app, send SMS to Kevin Chen (+1-234-567-8900) with message 'about dinner'",
-        reasoning=True,  # Enable planning for complex tasks
-    )
-
-    print(f"Success: {result.success}")
-    print(f"Explanation: {result.reason}")
-    print(f"Steps taken: {result.steps}")
-
-    # Get action history for memory updates
-    actions = client.get_action_history(notable_only=True)
-    print(f"Notable actions: {len(actions)}")
-
-
-async def example_low_level_monitoring():
-    """Example: Monitor device state for memory updates."""
-    client = DroidRunClient(device_serial="emulator-5554")
-    await client.connect()
-
-    # Continuous monitoring loop (for background task)
-    while True:
-        change = await client.detect_state_change()
-
-        if change:
-            print(f"Detected: {change['change_type']}")
-            print(f"From: {change['before']['package']}")
-            print(f"To: {change['after']['package']}")
-
-            # Update memory graph based on change
-            if change['change_type'] in ['app_switch', 'screen_change']:
-                # Send to memory handler
-                pass
-
-        await asyncio.sleep(1)  # Poll every second
-
-
-async def example_direct_actions():
-    """Example: Direct device control."""
-    client = DroidRunClient(device_serial="emulator-5554")
-    await client.connect()
-
-    # Get current state
-    state = await client.get_current_state()
-    print(f"Current app: {state['phone_state']['packageName']}")
-    print(f"UI elements: {len(state['ui_elements'])}")
-
-    # Find and tap a button
-    for idx, element in enumerate(state['ui_elements']):
-        if element.get('text') == 'Settings':
-            await client.tap_by_index(idx)
-            break
-
-    # Take screenshot
-    screenshot = await client.take_screenshot()
-    with open('screenshot.png', 'wb') as f:
-        f.write(screenshot)
-
-
-if __name__ == "__main__":
-    # Run examples
-    asyncio.run(example_high_level_execution())
+        
+# NOTE: example usage should be moved to eternal test scripts

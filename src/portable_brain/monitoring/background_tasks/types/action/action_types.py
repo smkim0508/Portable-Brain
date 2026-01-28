@@ -8,6 +8,7 @@ class GenericActionType(str, Enum):
     TODO: add more actions
     """
     APP_SWITCH = "app_switch"
+    UNKNOWN = "unknown"
 
 class InstagramActionType(str, Enum):
     """

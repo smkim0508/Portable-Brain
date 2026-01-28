@@ -15,6 +15,7 @@ from portable_brain.monitoring.background_tasks.types.action.action_types import
     WhatsAppActionType,
     SlackActionType
 )
+from portable_brain.monitoring.background_tasks.types.ui_states.ui_state import UIState, UIActivity
 
 # specific actions, as defined by the types above
 # NOTE: each action inherits shared metadata from ActionBase class
@@ -29,8 +30,14 @@ class AppSwitchAction(GenericActionBase):
     type: Literal[GenericActionType.APP_SWITCH] = GenericActionType.APP_SWITCH
     src_package: str
     dst_package: str
-    src_activity: Optional[str] = None
-    dst_activity: Optional[str] = None
+    src_activity: Optional[UIActivity] = None
+    dst_activity: Optional[UIActivity] = None
+
+class UnknownAction(GenericActionBase):
+    """
+    A placeholder for unknown actions.
+    """
+    type: Literal[GenericActionType.UNKNOWN] = GenericActionType.UNKNOWN
 
 class InstagramMessageSentAction(InstagramActionBase):
     """
@@ -73,6 +80,7 @@ class SlackMessageSentAction(SlackActionBase):
 Action = Union[
     # Generic actions
     AppSwitchAction,
+    UnknownAction,
     # Instagram actions
     InstagramMessageSentAction,
     InstagramPostLikedAction,

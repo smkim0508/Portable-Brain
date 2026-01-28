@@ -63,13 +63,19 @@ helpers:
 #### High-level Distinction + Tasks
 1. Observation Tracker makes constant note of state change.
 -> polls on the DroidRun client which uses raw client.get_state() to compare states, and return the change diff.
-    - TODO: should first pass raw state into making it a canonical state (1st layer of filtering) -> then, if canonical UI state diffs, we format the diff into canonical StateChange and return
+    - First pass raw state into making it a canonical state (1st layer of filtering) -> then, if canonical UI state diffs, we format the diff into canonical StateChange and return 
 2. Then, if there is a state change, uses internal helper to create inferred action.
-    - TODO: this internal helper should use canonical inferred action DTO
-3. The inferred action, alongside UI change diffs, is stored as a final observation.
+    - This internal helper should use canonical inferred action DTO
+
+**LAST COMPLETION
+3. The inferred action, alongside UI change diffs, is stored as a final observation (i.e. the nodes of memory representation).
     - TODO: the final observation should be universal for both observed/inferred actions and actually executed commands by DroidRun Agent (TBD in future).
     - i.e. the observation should also become a DTO, just a wrapper to hold both the action (whether inferred or executed by user command) + ui state change (a.k.a. the outcome of action), and any supporting metadata.
 **The above hierarchy of observations, state changes, actions, will help to keep a clean history of HCI data log.
+
+
+**TODO: need a way to cleanly get metadata from UI states when referencing UI changes for specific apps. E.g. need to somehow store "username" for instagram UI changes so that it can be referenced in app.
+
 
 ### Autonomous NL Query Eecution
 - The service currently supports both Google GenAI client and Amazon Nova models.
