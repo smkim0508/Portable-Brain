@@ -518,9 +518,12 @@ class DroidRunClient:
         current_state = UIState(
             state_id=state_id,
             package=raw_state[3]["packageName"],
-            activity=raw_state[3]["activity"],
+            # activity=raw_state[3]["activity"],
+            # NOTE: temporarily disabled activity storage.
+            activity=UIActivity(activity="dummy"),
             ui_elements=raw_state[2],
-            focused_element=int(raw_state[1]),
+            # if there is no focused element, set it to None
+            focused_element=int(raw_state[1]) if raw_state[1] else None,
             raw_tree=raw_tree,
         )
 
