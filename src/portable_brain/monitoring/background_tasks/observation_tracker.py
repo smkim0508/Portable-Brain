@@ -64,6 +64,7 @@ class ObservationTracker:
                     # track of the most recent state changes
                     # NOTE: automatically maintained via deque
                     self.recent_state_changes.append(change)
+                    logger.info(f"Detected state change: {change.change_type}")
                     # infer what action might have caused this change
                     inferred_action = self._infer_action(change)
                     # store inferred actions
@@ -95,7 +96,7 @@ class ObservationTracker:
 
         # TODO: infer all actions based on each change type and state metadata
         if change.change_type == StateChangeType.APP_SWITCH:
-            logger.info(f"inferred app switch action from change type: {change_type} and package: {before.package} to {after.package}")
+            logger.info(f"Inferred app switch action from change type: {change_type} and package: {before.package} to {after.package}")
             return AppSwitchAction(
                 timestamp=change.timestamp,
                 source_change_type=change.change_type,
@@ -111,7 +112,7 @@ class ObservationTracker:
         # else, see if current app is supported
         elif curr_package == AndroidApp.INSTAGRAM:
             if change_type == StateChangeType.TEXT_INPUT:
-                logger.info(f"inferred Instagram message sent action from change type: {change_type} and package: {curr_package}")
+                logger.info(f"Inferred Instagram message sent action from change type: {change_type} and package: {curr_package}")
                 return InstagramMessageSentAction(
                     timestamp=change.timestamp,
                     source_change_type=change.change_type,
@@ -142,7 +143,7 @@ class ObservationTracker:
         
         elif curr_package == AndroidApp.SLACK:
             if change_type == StateChangeType.TEXT_INPUT:
-                logger.info(f"inferred Slack message sent action from change type: {change_type} and package: {curr_package}")
+                logger.info(f"Inferred Slack message sent action from change type: {change_type} and package: {curr_package}")
                 return SlackMessageSentAction(
                     timestamp=change.timestamp,
                     source_change_type=change.change_type,

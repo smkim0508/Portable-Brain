@@ -40,7 +40,8 @@ async def stop_observation_tracking(
         logger.error(f"Error stopping observation tracking task: {e}")
         return {"message": f"Error stopping observation tracking task: {e}"}, 500
 
-@router.get("/clear")
+# observation history
+@router.get("/clear-observations")
 def clear_observations(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
@@ -67,6 +68,19 @@ def retrieve_observations(
         logger.error(f"Error retrieving observation history: {e}")
         return {"message": f"Error retrieving observation history: {e}"}, 500
 
+# recent UI state change history
+@router.get("/clear-state-changes")
+def clear_state_changes(
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        observation_tracker.clear_state_changes()
+        return {"message": "successfully cleared recent UI state change history!"}
+    except Exception as e:
+        logger.error(f"Error clearing UI state change history: {e}")
+        return {"message": f"Error clearing UI state change history: {e}"}, 500
+    
 @router.get("/get-recent-state-changes")
 def retrieve_recent_state_changes(
     limit: Optional[int] = Query(default=None, ge=1, le=10),
@@ -74,10 +88,38 @@ def retrieve_recent_state_changes(
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
 ):
     try:
-        # NOTE: only retrieve the most recent observations by limit
-        logger.info(f"Retrieving observation history with limit: {limit}")
+        # NOTE: only retrieve the most recent state changes by limit
+        logger.info(f"Retrieving recent UI state change history with limit: {limit}")
         state_changes = observation_tracker.get_state_changes(limit=limit)
         return {"state_changes": state_changes}, 200
     except Exception as e:
-        logger.error(f"Error retrieving observation history: {e}")
-        return {"message": f"Error retrieving observation history: {e}"}, 500
+        logger.error(f"Error retrieving recent state change history: {e}")
+        return {"message": f"Error retrieving recent state change history: {e}"}, 500
+
+# inferred action history
+@router.get("/clear-inferred-actions")
+def clear_inferred_actions(
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        observation_tracker.clear_inferred_actions()
+        return {"message": "successfully cleared inferred action history!"}
+    except Exception as e:
+        logger.error(f"Error clearing inferred action history: {e}")
+        return {"message": f"Error clearing inferred action history: {e}"}, 500
+    
+@router.get("/get-inferred-actions")
+def retrieve_inferred_actions(
+    limit: Optional[int] = Query(default=None, ge=1, le=10),
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        # NOTE: only retrieve the most recent observations by limit
+        logger.info(f"Retrieving inferred action history with limit: {limit}")
+        actions = observation_tracker.get_inferred_actions(limit=limit)
+        return {"actions": actions}, 200
+    except Exception as e:
+        logger.error(f"Error retrieving inferred action history: {e}")
+        return {"message": f"Error retrieving inferred action history: {e}"}, 500
