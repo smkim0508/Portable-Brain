@@ -1,11 +1,16 @@
 # background async tasks for monitoring
 import time
 import asyncio
+from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 from portable_brain.common.logging.logger import logger
 from portable_brain.core.dependencies import get_droidrun_client, get_observation_tracker
+
+# monitoring DTOs
+from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import UIStateChange
+from portable_brain.monitoring.background_tasks.types.action.actions import Action
 
 router = APIRouter(prefix="/monitoring/background-tasks", tags=["Monitoring Background Tasks"])
 
@@ -49,7 +54,7 @@ def clear_observations(
     
 @router.get("/get-observations")
 def retrieve_observations(
-    limit: int = Query(default=5, ge=1, le=100),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
 ):
@@ -58,6 +63,21 @@ def retrieve_observations(
         logger.info(f"Retrieving observation history with limit: {limit}")
         observations = observation_tracker.get_observations(limit=limit)
         return {"observations": observations}, 200
+    except Exception as e:
+        logger.error(f"Error retrieving observation history: {e}")
+        return {"message": f"Error retrieving observation history: {e}"}, 500
+
+@router.get("/get-recent-state-changes")
+def retrieve_recent_state_changes(
+    limit: Optional[int] = Query(default=None, ge=1, le=10),
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        # NOTE: only retrieve the most recent observations by limit
+        logger.info(f"Retrieving observation history with limit: {limit}")
+        state_changes = observation_tracker.get_state_changes(limit=limit)
+        return {"state_changes": state_changes}, 200
     except Exception as e:
         logger.error(f"Error retrieving observation history: {e}")
         return {"message": f"Error retrieving observation history: {e}"}, 500
