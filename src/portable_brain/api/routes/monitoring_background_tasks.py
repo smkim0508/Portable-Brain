@@ -14,7 +14,7 @@ from portable_brain.monitoring.background_tasks.types.action.actions import Acti
 
 router = APIRouter(prefix="/monitoring/background-tasks", tags=["Monitoring Background Tasks"])
 
-@router.get("/start")
+@router.post("/start")
 async def start_observation_tracking(
     poll_interval: float = Query(default=1.0, gt=0.0),
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
@@ -28,7 +28,7 @@ async def start_observation_tracking(
         logger.error(f"Error starting observation tracking task: {e}")
         return {"message": f"Error starting observation tracking task: {e}"}, 500
 
-@router.get("/stop")
+@router.post("/stop")
 async def stop_observation_tracking(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
@@ -41,7 +41,7 @@ async def stop_observation_tracking(
         return {"message": f"Error stopping observation tracking task: {e}"}, 500
 
 # observation history
-@router.get("/clear-observations")
+@router.post("/clear-observations")
 def clear_observations(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
@@ -69,7 +69,7 @@ def retrieve_observations(
         return {"message": f"Error retrieving observation history: {e}"}, 500
 
 # recent UI state change history
-@router.get("/clear-state-changes")
+@router.post("/clear-state-changes")
 def clear_state_changes(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
@@ -97,7 +97,7 @@ def retrieve_recent_state_changes(
         return {"message": f"Error retrieving recent state change history: {e}"}, 500
 
 # inferred action history
-@router.get("/clear-inferred-actions")
+@router.post("/clear-inferred-actions")
 def clear_inferred_actions(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
