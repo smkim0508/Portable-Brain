@@ -178,7 +178,8 @@ class ObservationTracker:
 
     def _create_observation(self) -> Optional[Observation]:
         """
-        Creates the final observation object based on the current history of actions.
+        Creates a final observation object based on the current history of actions.
+            - An observation object will be one of the possible memory nodes.
         This is a high-level abstraction derived from a union of low-level actions.
         NOTE: observation is what's ultimately stored in the memory.
         - Returns None if no meaningful observation can be made.
