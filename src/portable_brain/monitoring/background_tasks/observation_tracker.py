@@ -21,7 +21,12 @@ from portable_brain.monitoring.background_tasks.types.action.actions import (
     SlackMessageSentAction,
     # TBD
 )
-from portable_brain.monitoring.background_tasks.types.observation.observations import Observation
+from portable_brain.monitoring.background_tasks.types.observation.observations import (
+    Observation,
+    LongTermPeopleObservation,
+    LongTermPreferencesObservation,
+    ShortTermContentObservation
+)
 
 from collections import deque
 
@@ -178,7 +183,16 @@ class ObservationTracker:
         NOTE: observation is what's ultimately stored in the memory.
         - Returns None if no meaningful observation can be made.
         """
-        # TODO: use the history of inferred actions to build observation
+        # TODO: use the history of inferred actions to build more observations
+        # for now, just build a single observation to test
+
+        # if no inferred actions, return
+        if not self.inferred_actions:
+            return None
+        
+        latest_action = self.inferred_actions[-1]
+        
+        # TODO: complete this handling
         pass
 
     def get_inferred_actions(
