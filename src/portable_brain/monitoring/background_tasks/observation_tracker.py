@@ -28,6 +28,9 @@ from portable_brain.monitoring.background_tasks.types.observation.observations i
     ShortTermContentObservation
 )
 
+# LLM for inference
+from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
+
 from collections import deque
 
 class ObservationTracker:
@@ -42,12 +45,13 @@ class ObservationTracker:
     - Also create canonical DTO for observations and enums for actions
     """
 
-    def __init__(self, client: DroidRunClient):
-        self.client = client
+    def __init__(self, droidrun_client: DroidRunClient):
+        self.droidrun_client = droidrun_client
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
-        # track all high-level observations based on inferred actions
-        self.observations = []
+        # track the 20 most recent high-level observations based on inferred actions
+        # NOTE: observations look at prev. records to update
+        self.observations: deque[Observation] = deque(maxlen=20)
         # store recent state changes as a queue w/ max length of 10 to avoid too much memory
         self.recent_state_changes: deque[UIStateChange] = deque(maxlen=10)
         self.running = False
@@ -65,7 +69,7 @@ class ObservationTracker:
         while self.running:
             try:
                 # Detect any state change
-                change: UIStateChange | None = await self.client.detect_state_change()
+                change: UIStateChange | None = await self.droidrun_client.detect_state_change()
 
                 if change:
                     # track of the most recent state changes
@@ -176,25 +180,43 @@ class ObservationTracker:
             description=change.description,
         )
 
-    def _create_observation(self) -> Optional[Observation]:
+    def _create_observation(self, context_size: int = 10) -> Optional[Observation]:
         """
         Creates a final observation object based on the current history of actions.
             - An observation object will be one of the possible memory nodes.
         This is a high-level abstraction derived from a union of low-level actions.
         NOTE: observation is what's ultimately stored in the memory.
         - Returns None if no meaningful observation can be made.
+
+        Observations are made in a continuous, sequential environment, so to prevent duplicates:
+            - Utilize an appropriate window size of actions (context_size)
+                - This helper should only be called every context_size new actions are recorded
+            - Look at previous time step's observation, and either update it based on new context or create a new observation
         """
         # TODO: use the history of inferred actions to build more observations
         # for now, just build a single observation to test
 
-        # if no inferred actions, return
+        # if no inferred actions, return; there are no observations to make
         if not self.inferred_actions:
             return None
         
-        latest_action = self.inferred_actions[-1]
-        
-        # TODO: complete this handling
-        pass
+        recent_actions = list(self.inferred_actions)[-context_size:]
+        last_observation = self.observations[-1] if self.observations else None
+
+        # create new observation or update previous
+        new_observation: Observation | None = None
+        if last_observation:
+            # if we have a recent observation, either update it or create new
+            # compare previous observation in the context of recent actions
+            
+            # logic for looking at recent actions and making a meaningful observation
+            pass
+        else:
+            # otherwise, create a new observation unconditionally
+            pass
+            
+        # return new observation
+        return new_observation
 
     def get_inferred_actions(
         self,
@@ -246,7 +268,7 @@ class ObservationTracker:
             List of observations
             NOTE: the bottom index in returned list is the most recent. Possibly reverse indices to fetch most recent on top.
         """
-        observations = self.observations
+        observations = list(self.observations)
 
         # optional filtering by number of observations limit
         if limit:

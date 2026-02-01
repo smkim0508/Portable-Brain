@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
             raise RuntimeError("DroidRun is a required dependency. Please check.")
 
         # Observation tracker
-        observation_tracker = ObservationTracker(client=droidrun_client) # NOTE: uses the same client as droidrun
+        observation_tracker = ObservationTracker(droidrun_client=droidrun_client) # NOTE: uses the same client as droidrun
         app.state.observation_tracker = observation_tracker
         logger.info(f"Background observation tracker initialized.")
 

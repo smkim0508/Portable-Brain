@@ -39,6 +39,7 @@ class ObservationBase(BaseModel):
 class LongTermPeopleObservation(ObservationBase):
     """
     Observation for inter-personal relationships, which is a long term memory.
+    - e.g. relationship between me and another person in contacts
     """
     memory_type: MemoryType = MemoryType.LONG_TERM_PEOPLE
     target_id: str # id of the target person, as a unique identifier
@@ -49,6 +50,7 @@ class LongTermPeopleObservation(ObservationBase):
 class LongTermPreferencesObservation(ObservationBase):
     """
     Observation for user preferences, which is a long term memory.
+    - e.g. recurring pattern of application usage (like email -> slack)
     """
     memory_type: MemoryType = MemoryType.LONG_TERM_PREFERENCES
     target_id: str # id of the target object (e.g. app), as a unique identifier
@@ -58,6 +60,7 @@ class LongTermPreferencesObservation(ObservationBase):
 class ShortTermContentObservation(ObservationBase):
     """
     Observation for short term content context, which is a short term memory.
+    - e.g. recently viewed documents or media.
     """
     memory_type: MemoryType = MemoryType.SHORT_TERM_CONTENT
     source_id: str # unique identifier of the source of the content
