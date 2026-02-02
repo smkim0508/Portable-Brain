@@ -46,8 +46,9 @@ class ObservationTracker:
     - Also create canonical DTO for observations and enums for actions
     """
 
-    def __init__(self, droidrun_client: DroidRunClient):
+    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient):
         self.droidrun_client = droidrun_client
+        self.llm_client = llm_client
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
         # track the 20 most recent high-level observations based on inferred actions
