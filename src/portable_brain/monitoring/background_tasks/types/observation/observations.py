@@ -55,7 +55,8 @@ class ShortTermPreferencesObservation(ObservationBase):
     """
     memory_type: MemoryType = MemoryType.SHORT_TERM_PREFERENCES
     source_id: str # id of the source object (e.g. app) that this prefernece is relevant to, as a unique identifier
-    edge: str # semantic classification of the node type w.r.t. target
+    # NOTE: edge can be None until another memory is attached to it
+    edge: Optional[str] # semantic classification of the node type w.r.t. target
     node: str # semantic description of the relationship/observation
     recurrence: int # number of occurrences that this preference is recorded
 

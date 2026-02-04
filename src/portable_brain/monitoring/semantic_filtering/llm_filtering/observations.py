@@ -18,8 +18,11 @@ from portable_brain.monitoring.background_tasks.types.action.actions import Acti
 from portable_brain.monitoring.observation_repository import ObservationRepository
 
 # for testing
-from portable_brain.monitoring.semantic_filtering.llm_filtering.system_prompts.observation_prompts import ObservationPrompt
+from portable_brain.monitoring.semantic_filtering.llm_filtering.system_prompts.observation_prompts import ObservationPrompts
 from portable_brain.monitoring.semantic_filtering.llm_filtering.llm_response_types.observation_responses import NewObservationLLMResponse, TestObservationLLMResponse
+
+# logger
+from portable_brain.common.logging.logger import logger
 
 class ObservationInferencer(ObservationRepository):
     """
@@ -29,12 +32,13 @@ class ObservationInferencer(ObservationRepository):
 
     async def test_create_new_observation(self, actions: list[Action]) -> Optional[Observation]:
         test_llm_response = await self.llm_client.acreate(
-            system_prompt=ObservationPrompt.test_system_prompt,
-            user_prompt=ObservationPrompt.test_user_prompt,
+            system_prompt=ObservationPrompts.test_system_prompt,
+            user_prompt=ObservationPrompts.test_user_prompt,
             response_model=TestObservationLLMResponse
         )
         # TODO: parse response
-        return
+        logger.info(f"llm response: {test_llm_response}")
+        return # returns nothing, just check llm response via log
 
     async def create_new_observation(
         self,
@@ -57,13 +61,29 @@ class ObservationInferencer(ObservationRepository):
         # edge = await self.llm_client.acreate(
         #     # TODO: fill in prompt, schema
         # )
+
+        new_observation_response: NewObservationLLMResponse = await self.llm_client.acreate(
+            system_prompt=ObservationPrompts.create_new_observation_system_prompt,
+            user_prompt=ObservationPrompts.get_create_new_observation_user_prompt(actions),
+            response_model=NewObservationLLMResponse
+        )
+
+        # parse response and log
+        observation_node = new_observation_response.observation_node
+        observation_reasoning = new_observation_response.reasoning
+        logger.info(f"new observation llm response: {observation_node}, reasoning: {observation_reasoning}")
+
+        # format into observation
         new_observation = ShortTermPreferencesObservation(
             id=str(uuid.uuid4()),
             created_at=datetime.now(),
             source_id="test_source_id",
-            edge="test_edge",
-            node="test_node",
+            edge=None,
+            node=observation_node,
             recurrence=1,
             importance=1.0
         )
 
+        # TODO: need some way to fetch observation and update edge, node details, and recurrence info
+
+        return new_observation

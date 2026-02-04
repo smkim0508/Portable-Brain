@@ -388,6 +388,9 @@ class ObservationTracker(ObservationRepository):
                     await self._tracking_task
                 except asyncio.CancelledError:
                     pass  # Expected
+
+        # Clear the task reference after cleanup
+        self._tracking_task = None
     
     async def create_test_observation(self, context_size: int = 10) -> Optional[Observation]:
         """
@@ -420,7 +423,7 @@ class ObservationTracker(ObservationRepository):
 
         # for now, unconditional test
         # use helper to create observation
-        new_observation = await self.inferencer.create_new_observation(actions=recent_actions, latest_observation=last_observation)
+        new_observation = await self.inferencer.test_create_new_observation(actions=recent_actions)
 
         # TODO: load in llm client and use semantic parsing
         # short -> long term storage is only relevant for preferences
