@@ -1,4 +1,4 @@
-# src/monitoring/observation_tracker.py
+# The tracker for monitoring low-level HCI data as a background task
 import asyncio
 import uuid
 from datetime import datetime
@@ -6,6 +6,9 @@ from typing import Dict, Any, List, Optional
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
 from portable_brain.common.types.android_apps import AndroidApp
 from portable_brain.common.logging.logger import logger
+
+# Base repository for all observations
+from portable_brain.monitoring.observation_repository import ObservationRepository
 
 # Canonical DTOs for UI state, inferred action, observations
 from portable_brain.monitoring.background_tasks.types.ui_states.ui_state import UIState, UIActivity
@@ -32,12 +35,12 @@ from portable_brain.monitoring.background_tasks.types.observation.observations i
 
 # LLM for inference
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
-# helper to create observations
-from portable_brain.monitoring.semantic_filtering.llm_filtering.observations import create_new_observation
+# helper class to infer observations
+from portable_brain.monitoring.semantic_filtering.llm_filtering.observations import ObservationInferencer
 # data structrue to track only recent information
 from collections import deque
 
-class ObservationTracker:
+class ObservationTracker(ObservationRepository):
     """
     Track ALL device state changes, including manual user actions.
     - Client refers to the main DroidRunClient instance.
@@ -49,9 +52,8 @@ class ObservationTracker:
     - Also create canonical DTO for observations and enums for actions
     """
 
-    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient):
-        self.droidrun_client = droidrun_client
-        self.llm_client = llm_client
+    def __init__(self):
+        # NOTE: if tracker holds any additional dependencies in the future, the items from repository needs to be re-initialized.
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
         # track the 20 most recent high-level observations based on inferred actions
@@ -61,6 +63,8 @@ class ObservationTracker:
         self.recent_state_changes: deque[UIStateChange] = deque(maxlen=10)
         self.running = False
         self._tracking_task: Optional[asyncio.Task] = None
+        # observation helper
+        self.inferencer = ObservationInferencer(droidrun_client=self.droidrun_client, llm_client=self.llm_client)
 
     async def start_tracking(self, poll_interval: float = 1.0):
         """
@@ -412,7 +416,7 @@ class ObservationTracker:
 
         # for now, unconditional test
         # use helper to create observation
-        new_observation = await create_new_observation(actions=recent_actions, latest_observation=last_observation)
+        new_observation = await self.inferencer.create_new_observation(actions=recent_actions, latest_observation=last_observation)
 
         # TODO: load in llm client and use semantic parsing
         # short -> long term storage is only relevant for preferences
