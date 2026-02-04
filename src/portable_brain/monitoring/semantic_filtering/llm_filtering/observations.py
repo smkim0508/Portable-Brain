@@ -20,6 +20,7 @@ from portable_brain.monitoring.observation_repository import ObservationReposito
 class ObservationInferencer(ObservationRepository):
     """
     Helper to inference observations from history of actions and recent state changes.
+    NOTE: inherits from repository for dependencies.
     """
 
     async def create_new_observation(
