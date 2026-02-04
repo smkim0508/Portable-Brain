@@ -57,6 +57,8 @@ class ObservationTracker(ObservationRepository):
         super().__init__(droidrun_client=droidrun_client, llm_client=llm_client)
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
+        self.action_context_size: int = 10 # number of previous actions to track before attempting to infer an observation
+        self.action_counter: int = 0 # counter to track the number of actions since last observation
         # track the 20 most recent high-level observations based on inferred actions
         # NOTE: observations look at prev. records to update
         self.observations: deque[Observation] = deque(maxlen=20)
@@ -91,7 +93,16 @@ class ObservationTracker(ObservationRepository):
                     # store inferred actions
                     self.inferred_actions.append(inferred_action)
 
-                    # TODO: should be handled by memory handler in future
+                    self.action_counter += 1
+                    # penultimate step, create observation node every context_size actions
+                    if self.action_counter >= self.action_context_size:
+                        observation = await self._create_observation(context_size=self.action_context_size)
+                        if observation: 
+                            self.observations.append(observation)
+                        # reset counter
+                        self.action_counter = 0
+
+                    # TODO: final step, should be handled by memory handler in future
                     # await self.memory_handler.process_observation(observation)
                     # shorter cooldown if state change HAS been found -> likely another action might pursue
                     await asyncio.sleep(0.2)
@@ -225,20 +236,9 @@ class ObservationTracker(ObservationRepository):
             # otherwise, create a new observation unconditionally
             pass
 
-        # for now, unconditional test
-        # NOTE: need some way to fetch existing observations and update it or create a new one - RAG?
-        # edge = await self.llm_client.acreate(
-        #     # TODO: fill in prompt, schema
-        # )
-        new_observation = ShortTermPreferencesObservation(
-            id=str(uuid.uuid4()),
-            created_at=datetime.now(),
-            source_id="test_source_id",
-            edge="test_edge",
-            node="test_node",
-            recurrence=1,
-            importance=1.0
-        )
+        # create new observation w/ inferencer
+        logger.info(f"Creating new observation from recent actions.")
+        new_observation = await self.inferencer.create_new_observation(recent_actions)
 
         # TODO: load in llm client and use semantic parsing
         # short -> long term storage is only relevant for preferences
@@ -351,6 +351,18 @@ class ObservationTracker(ObservationRepository):
     def clear_state_changes(self):
         """Clear state change history after persisting to DB."""
         self.recent_state_changes.clear()
+
+    # helper to monitor states of tracker
+    def get_monitoring_overview(self):
+        """
+        Lightweight helper to get overview of monitoring history.
+        Currently supports fetching the length of each history.
+        """
+        return {
+            "inferred_actions": len(self.inferred_actions),
+            "observations": len(self.observations),
+            "state_changes": len(self.recent_state_changes),
+        }
 
     def start_background_tracking(self, poll_interval: float = 1.0):
         """

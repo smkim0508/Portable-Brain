@@ -123,3 +123,15 @@ def retrieve_inferred_actions(
     except Exception as e:
         logger.error(f"Error retrieving inferred action history: {e}")
         return {"message": f"Error retrieving inferred action history: {e}"}, 500
+
+@router.get("/monitoring-overview")
+def retrieve_monitoring_overview(
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        overview = observation_tracker.get_monitoring_overview()
+        return {"overview": overview}, 200
+    except Exception as e:
+        logger.error(f"Error retrieving monitoring overview: {e}")
+        return {"message": f"Error retrieving monitoring overview: {e}"}, 500

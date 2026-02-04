@@ -42,8 +42,7 @@ class ObservationInferencer(ObservationRepository):
 
     async def create_new_observation(
         self,
-        actions: list[Action],
-        latest_observation: Optional[Observation]
+        actions: list[Action]
     ) -> Optional[Observation]:
         """
         Creates a NEW observation, or optionally None if no observation can be inferred.
