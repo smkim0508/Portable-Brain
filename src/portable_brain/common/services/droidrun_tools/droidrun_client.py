@@ -515,6 +515,16 @@ class DroidRunClient:
         # for now, just make a new state_id for each UI state, regardless of duplicates.
 
         state_id = str(uuid.uuid4())
+
+        # parse focused_element safely - handle non-numeric values
+        focused_element = None
+        if raw_state[1]:
+            try:
+                focused_element = int(raw_state[1])
+            except (ValueError, TypeError):
+                # if focused_element is non-numeric (e.g., "YouTube"), set to None
+                focused_element = None
+
         current_state = UIState(
             state_id=state_id,
             package=raw_state[3]["packageName"],
@@ -522,8 +532,7 @@ class DroidRunClient:
             # NOTE: temporarily disabled activity storage.
             activity=UIActivity(activity="dummy"),
             ui_elements=raw_state[2],
-            # if there is no focused element, set it to None
-            focused_element=int(raw_state[1]) if raw_state[1] else None,
+            focused_element=focused_element,
             raw_tree=raw_tree,
         )
 

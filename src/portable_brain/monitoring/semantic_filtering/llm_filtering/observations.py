@@ -71,7 +71,10 @@ class ObservationInferencer(ObservationRepository):
         observation_node = new_observation_response.observation_node
         observation_reasoning = new_observation_response.reasoning
         logger.info(f"new observation llm response: {observation_node}, reasoning: {observation_reasoning}")
-
+        
+        if not observation_node:
+            return None
+        
         # format into observation
         new_observation = ShortTermPreferencesObservation(
             id=str(uuid.uuid4()),

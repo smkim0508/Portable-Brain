@@ -8,7 +8,7 @@ class NewObservationLLMResponse(BaseModel):
     LLM response schema for creating a new observation.
     NOTE: the observation edge will be inferenced later when retrieving similar observations.
     """
-    observation_node: str # semantic meaning of this observation
+    observation_node: Optional[str] # semantic meaning of this observation
     reasoning: str # step-by-step reasoning
 
 class TestObservationLLMResponse(BaseModel):

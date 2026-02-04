@@ -44,7 +44,7 @@ class ObservationPrompts():
     Return ONLY valid JSON (no extra text, no markdown, no comments). Use double-quoted keys/strings and no trailing commas.
 
     {
-    "observation_node": "A concise 1-2 sentence description of the observed pattern, or empty string if no meaningful pattern exists.",
+    "observation_node": "A concise 1-2 sentence description of the observed pattern, or null if no meaningful pattern exists.",
     "reasoning": "Step-by-step thought process analyzing the actions, including examination of action types, targets, timing, patterns, significance, and final conclusion."
     }
 
@@ -61,7 +61,7 @@ class ObservationPrompts():
     GLOBAL GUARDRAILS (STRICT)
     - Pattern-Based Only: Create observations ONLY from recurring behaviors, sequences, or preferences (not isolated incidents).
     - Minimum Evidence Threshold: Generally require >=3 related actions to establish a meaningful pattern.
-    - Conservative Inference: When in doubt, return empty string ("") for observation_node rather than making weak inferences.
+    - Conservative Inference: When in doubt, return null for observation_node rather than making weak inferences.
     - Concrete Specificity: Reference concrete entities (people names, app packages, specific times) rather than vague generalizations.
     - No Speculation: Do not infer emotions, intentions, or context beyond what action metadata directly supports.
     - Actionable Insight: Observations must provide insight useful for anticipating user needs or preferences.
@@ -70,6 +70,8 @@ class ObservationPrompts():
     - Ignore Low-Signal Actions: UnknownAction entries (importance: 0.0) provide minimal pattern evidence; do not base observations solely on these.
 
     CLEAR METHODOLOGY (FOLLOW IN ORDER)
+
+    **CRITICAL**: If no meaningful pattern exists, observation_node MUST be null (not "", not "null", not any string - use JSON null).
 
     1) Parse & Index Actions
     - Read the full action sequence; note the count and date range.
@@ -109,7 +111,7 @@ class ObservationPrompts():
 
     4) Select Target Pattern & Craft Observation
     - Choose the SINGLE most significant pattern from Step 3 (highest significance score).
-    - If no patterns meet significance threshold -> observation_node = ""
+    - If no patterns meet significance threshold -> observation_node = null
     - If valid pattern exists:
         • Extract key attributes: specific entities (names, apps), temporal context (time-of-day, frequency), behavioral insight
         • Construct observation_node phrasing:
@@ -126,15 +128,15 @@ class ObservationPrompts():
         3. Note frequency and temporal analysis
         4. Describe pattern(s) detected
         5. Assess significance and pattern strength
-        6. State conclusion: whether pattern is sufficient for observation
+        6. State conclusion: whether pattern is sufficient for observation (if insufficient, explicitly state "return null observation")
     - Use numbered format (1. ..., 2. ..., etc.) for clarity.
     - Keep reasoning concise but complete (5-7 steps typical).
 
     6) Validate & Format Output
-    - Ensure observation_node is non-empty string OR empty string "" (not null, not omitted).
+    - Ensure observation_node is either a non-empty string OR null (never empty string "", never omitted).
     - Ensure reasoning is non-empty string with step-by-step trace.
     - Verify JSON structure matches CORE TASK schema exactly.
-    - Final check: Is observation specific, actionable, pattern-based, semantic, and concise?
+    - Final check: If observation_node is not null, is it specific, actionable, pattern-based, semantic, and concise?
 
     **IMPORTANT** PATTERN DETECTION PRIORITY:
     - Prioritize patterns with **high recurrence + temporal consistency** over single-occurrence behaviors.
@@ -144,7 +146,7 @@ class ObservationPrompts():
     - Multi-platform behavior with same entity -> context-aware platform preference signal.
 
     **IMPORTANT** EMPTY OBSERVATION CRITERIA:
-    Return observation_node = "" when:
+    Return observation_node = null when:
     - Total actions < 3, OR
     - No pattern recurs >=2 times, OR
     - All actions are UnknownAction or isolated app switches, OR
@@ -222,8 +224,8 @@ class ObservationPrompts():
 
     Model Output:
     {
-    "reasoning": "1. Received 3 actions: 2 AppSwitchAction, 1 UnknownAction (importance 0.0). 2. Action sequence: Chrome -> Gmail -> Instagram over 7-minute span. 3. Frequency analysis: single occurrence of this sequence, no recurrence across days or times. 4. Pattern assessment: no repeated targets, no temporal consistency, no established routine. 5. Significance: insufficient evidence; appears to be casual browsing or one-time navigation without clear intent. 6. Conclusion: no meaningful pattern detected; return empty observation.",
-    "observation_node": ""
+    "reasoning": "1. Received 3 actions: 2 AppSwitchAction, 1 UnknownAction (importance 0.0). 2. Action sequence: Chrome -> Gmail -> Instagram over 7-minute span. 3. Frequency analysis: single occurrence of this sequence, no recurrence across days or times. 4. Pattern assessment: no repeated targets, no temporal consistency, no established routine. 5. Significance: insufficient evidence; appears to be casual browsing or one-time navigation without clear intent. 6. Conclusion: no meaningful pattern detected; return null observation.",
+    "observation_node": null
     }
 
     ---
