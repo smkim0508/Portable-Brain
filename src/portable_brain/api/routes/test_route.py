@@ -1,11 +1,19 @@
 # test route for router + dependency injection
 
 import time
-from fastapi import APIRouter, Depends, Response, status, HTTPException
+from fastapi import APIRouter, Depends, Response, status, HTTPException, Query
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import get_async_session_maker
-from portable_brain.core.dependencies import get_main_db_engine, get_droidrun_client
+from portable_brain.core.dependencies import (
+    get_main_db_engine,
+    get_droidrun_client,
+    get_gemini_llm_client,
+    get_nova_llm_client,
+    get_observation_tracker
+)
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
+from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
+from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -61,6 +69,22 @@ async def third_test(
     # adjust the Response status directly
     response.status_code = status.HTTP_200_OK
     return response_obj
+
+# test llm observation tracking
+@router.post("/fourth-test")
+async def start_observation_tracking(
+    poll_interval: float = Query(default=1.0, gt=0.0),
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker)
+):
+    try:
+        # tracking_task = observation_tracker.start_background_tracking(poll_interval=poll_interval)
+        # logger.info(f"Observation tracking task started: {tracking_task}")
+        await observation_tracker.create_test_observation()
+        return {"message": "successfully tested llm observation!"}
+    except Exception as e:
+        logger.error(f"Error starting observation tracking task: {e}")
+        return {"message": f"Error starting observation tracking task: {e}"}, 500
 
 @router.get("/get-raw-tree")
 async def get_raw_accessibility_tree(
