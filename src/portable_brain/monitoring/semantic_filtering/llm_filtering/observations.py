@@ -17,11 +17,24 @@ from portable_brain.monitoring.background_tasks.types.action.actions import Acti
 
 from portable_brain.monitoring.observation_repository import ObservationRepository
 
+# for testing
+from portable_brain.monitoring.semantic_filtering.llm_filtering.system_prompts.observation_prompts import ObservationPrompt
+from portable_brain.monitoring.semantic_filtering.llm_filtering.llm_response_types.observation_responses import NewObservationLLMResponse, TestObservationLLMResponse
+
 class ObservationInferencer(ObservationRepository):
     """
     Helper to inference observations from history of actions and recent state changes.
     NOTE: inherits from repository for dependencies.
     """
+
+    async def test_create_new_observation(self, actions: list[Action]) -> Optional[Observation]:
+        test_llm_response = await self.llm_client.acreate(
+            system_prompt=ObservationPrompt.test_system_prompt,
+            user_prompt=ObservationPrompt.test_user_prompt,
+            response_model=TestObservationLLMResponse
+        )
+        # TODO: parse response
+        return
 
     async def create_new_observation(
         self,
