@@ -360,6 +360,9 @@ class ObservationTracker(ObservationRepository):
         Args:
             poll_interval: How often to poll for changes (seconds)
         """
+        if self._tracking_task is not None and self._tracking_task.done():
+            self._tracking_task = None
+
         if self._tracking_task is not None and not self._tracking_task.done():
             raise RuntimeError("Observation tracking already running")
 
