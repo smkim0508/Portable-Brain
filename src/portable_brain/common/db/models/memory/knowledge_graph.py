@@ -1,0 +1,1 @@
+# canonical ORM representation of knowledge graph memory
