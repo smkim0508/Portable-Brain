@@ -7,6 +7,7 @@ from portable_brain.common.db.models.memory.structured_storage import Structured
 
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 def create_all_tables(engine):
     # warn users if they don't want to commit this action
@@ -35,16 +36,27 @@ def create_table(table_name, engine):
     
 if __name__ == "__main__":
     # one-off script to create tables
-    load_dotenv()
+
+    # load in the proper .env file, defaulted to .env.dev
+    APP_ENV = os.getenv("APP_ENV", "dev")
+    # Define the path to the .env file relative to this config file's location.
+    # This file is in scripts/db/, so we go up two levels to project root
+    SERVICE_ROOT = Path(__file__).resolve().parents[2]
+    env_file_path = SERVICE_ROOT / f".env.{APP_ENV}"
+
+    # Load the .env file manually
+    print(f"Loading env file from: {env_file_path}")
+    load_dotenv(dotenv_path=env_file_path)
+
+    # one-off script to create tables
     MAIN_DB_USER = os.getenv("MAIN_DB_USER")
-    MAIN_DB_PASSWORD = os.getenv("MAIN_DB_PASSWORD")
+    MAIN_DB_PW = os.getenv("MAIN_DB_PW")
     MAIN_DB_HOST = os.getenv("MAIN_DB_HOST")
     MAIN_DB_PORT = os.getenv("MAIN_DB_PORT")
     MAIN_DB_NAME = os.getenv("MAIN_DB_NAME")
 
-    # (postgresql+asyncpg...) in the future for truly async application
-    # MAIN_DB_URL = f"postgresql+psycopg2://{MAIN_DB_USER}:{MAIN_DB_PASSWORD}@{MAIN_DB_HOST}:{MAIN_DB_PORT}/{MAIN_DB_NAME}"
-    MAIN_DB_URL = f"postgresql+psycopg2://{MAIN_DB_USER}:{MAIN_DB_PASSWORD}@{MAIN_DB_HOST}:{MAIN_DB_PORT}/{MAIN_DB_NAME}?sslmode=require"
+    # MAIN_DB_URL = f"postgresql+psycopg2://{MAIN_DB_USER}:{MAIN_DB_PW}@{MAIN_DB_HOST}:{MAIN_DB_PORT}/{MAIN_DB_NAME}"
+    MAIN_DB_URL = f"postgresql+psycopg2://{MAIN_DB_USER}:{MAIN_DB_PW}@{MAIN_DB_HOST}:{MAIN_DB_PORT}/{MAIN_DB_NAME}?sslmode=require"
 
     assert MAIN_DB_URL, "MAIN_DB_URL is not set"
 
