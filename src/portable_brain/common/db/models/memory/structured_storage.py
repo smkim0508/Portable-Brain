@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from datetime import datetime
 from typing import Optional
 
-class ObservationNode(MainDB_Base):
+class StructuredMemory(MainDB_Base):
     """
     Structured memory data structure to store semantic observation nodes as entities.
     No explicit, semantic relationship between nodes (no edges), but holds type of edge.
@@ -20,7 +20,7 @@ class ObservationNode(MainDB_Base):
 
     TODO: subject to change as memory storage evolves
     """
-    __tablename__ = "observation_nodes"
+    __tablename__ = "structured_memory"
 
     # Primary key
     id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -120,10 +120,10 @@ class ObservationEntity(MainDB_Base):
     - Find all observations mentioning "sarah_smith" (as source, target, or mentioned)
     - Find all observations involving Instagram (as platform, source, or context)
     """
-    __tablename__ = "observation_entities"
+    __tablename__ = "structured_observation_entities"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    observation_id: Mapped[str] = mapped_column(ForeignKey("observation_nodes.id"), index=True, nullable=False)
+    observation_id: Mapped[str] = mapped_column(ForeignKey("structured_memory.id"), index=True, nullable=False)
 
     entity_type: Mapped[str] = mapped_column(String, index=True, nullable=False)
     # "person", "app", "location", "content_source", "workspace", "channel"
@@ -134,7 +134,7 @@ class ObservationEntity(MainDB_Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
     # "source", "target", "mentioned", "platform"
 
-    observation: Mapped["ObservationNode"] = relationship(back_populates="entities")
+    observation: Mapped["StructuredMemory"] = relationship(back_populates="entities")
 
     __table_args__ = (
         # Query: "Find all observations mentioning sarah_smith"
@@ -156,17 +156,17 @@ class ObservationContext(MainDB_Base):
     - {"context_type": "workspace", "context_value": "TechCorp"}
     - {"context_type": "day_of_week", "context_value": "monday"}
     """
-    __tablename__ = "observation_contexts"
+    __tablename__ = "structured_observation_contexts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    observation_id: Mapped[str] = mapped_column(ForeignKey("observation_nodes.id"), index=True, nullable=False)
+    observation_id: Mapped[str] = mapped_column(ForeignKey("structured_memory.id"), index=True, nullable=False)
 
     context_type: Mapped[str] = mapped_column(String, index=True, nullable=False)
     # "app", "time_of_day", "location", "workspace", "channel", "day_of_week"
 
     context_value: Mapped[str] = mapped_column(String, index=True, nullable=False)
 
-    observation: Mapped["ObservationNode"] = relationship(back_populates="contexts")
+    observation: Mapped["StructuredMemory"] = relationship(back_populates="contexts")
 
     __table_args__ = (
         # Query: "Find observations in morning time"
