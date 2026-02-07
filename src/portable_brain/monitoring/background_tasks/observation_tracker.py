@@ -32,6 +32,8 @@ from portable_brain.monitoring.background_tasks.types.observation.observations i
     ShortTermPreferencesObservation,
     ShortTermContentObservation
 )
+# helper to persist memory in db
+from portable_brain.common.db.crud.memory.structured_memory_crud import save_observation_to_structured_memory
 
 # LLM for inference
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
@@ -41,6 +43,7 @@ from portable_brain.monitoring.semantic_filtering.llm_filtering.observations imp
 from collections import deque
 # async engine for db
 from sqlalchemy.ext.asyncio import AsyncEngine
+from portable_brain.common.db.session import get_async_session_maker
 
 class ObservationTracker(ObservationRepository):
     """
@@ -100,10 +103,8 @@ class ObservationTracker(ObservationRepository):
                     if self.action_counter >= self.action_context_size:
                         observation = await self._create_observation(context_size=self.action_context_size)
                         if observation: 
-                            # save observation to local history
-                            self.observations.append(observation)
-                            # save observation to memory db
-                            await self._save_observation_to_db(observation)
+                            # save observation to memory db and local history
+                            await self._save_observation(observation)
                         # reset counter
                         self.action_counter = 0
 
@@ -251,16 +252,17 @@ class ObservationTracker(ObservationRepository):
         # return new observation (may be None)
         return new_observation
     
-    async def _save_observation_to_db(self, observation: Observation):
+    async def _save_observation(self, observation: Observation) -> None:
         """
-        Save observation to memory db.
+        Save observation to memory db and local history.
         NOTE: this is the baseline database for now.
         """
-
-        # use db session
     
+        # let helper save observation to structured memory
+        await save_observation_to_structured_memory(observation, self.main_db_engine)
+        # saves to local history
         self.observations.append(observation)
-
+            
     def get_inferred_actions(
         self,
         limit: Optional[int] = None,
