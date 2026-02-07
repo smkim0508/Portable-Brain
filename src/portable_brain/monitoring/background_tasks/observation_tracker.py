@@ -39,6 +39,8 @@ from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
 from portable_brain.monitoring.semantic_filtering.llm_filtering.observations import ObservationInferencer
 # data structrue to track only recent information
 from collections import deque
+# async engine for db
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 class ObservationTracker(ObservationRepository):
     """
@@ -52,9 +54,9 @@ class ObservationTracker(ObservationRepository):
     - Also create canonical DTO for observations and enums for actions
     """
 
-    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient):
+    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient, main_db_engine: AsyncEngine):
         # NOTE: if tracker holds any additional dependencies in the future, the items from repository needs to be re-initialized.
-        super().__init__(droidrun_client=droidrun_client, llm_client=llm_client)
+        super().__init__(droidrun_client=droidrun_client, llm_client=llm_client, main_db_engine=main_db_engine)
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
         self.action_context_size: int = 10 # number of previous actions to track before attempting to infer an observation
@@ -67,7 +69,7 @@ class ObservationTracker(ObservationRepository):
         self.running = False
         self._tracking_task: Optional[asyncio.Task] = None
         # observation helper
-        self.inferencer = ObservationInferencer(droidrun_client=self.droidrun_client, llm_client=self.llm_client)
+        self.inferencer = ObservationInferencer(droidrun_client=self.droidrun_client, llm_client=self.llm_client, main_db_engine=self.main_db_engine)
 
     async def start_tracking(self, poll_interval: float = 1.0):
         """
@@ -98,7 +100,10 @@ class ObservationTracker(ObservationRepository):
                     if self.action_counter >= self.action_context_size:
                         observation = await self._create_observation(context_size=self.action_context_size)
                         if observation: 
+                            # save observation to local history
                             self.observations.append(observation)
+                            # save observation to memory db
+                            await self._save_observation_to_db(observation)
                         # reset counter
                         self.action_counter = 0
 
@@ -240,11 +245,21 @@ class ObservationTracker(ObservationRepository):
         logger.info(f"Creating new observation from recent actions.")
         new_observation = await self.inferencer.create_new_observation(recent_actions)
 
-        # TODO: load in llm client and use semantic parsing
+        # TODO: load in existing nodes by semantic similarity and update or make edges
         # short -> long term storage is only relevant for preferences
-            
+
         # return new observation (may be None)
         return new_observation
+    
+    async def _save_observation_to_db(self, observation: Observation):
+        """
+        Save observation to memory db.
+        NOTE: this is the baseline database for now.
+        """
+
+        # use db session
+    
+        self.observations.append(observation)
 
     def get_inferred_actions(
         self,

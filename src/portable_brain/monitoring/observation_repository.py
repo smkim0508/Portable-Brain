@@ -16,13 +16,17 @@ from portable_brain.monitoring.background_tasks.types.action.action_types import
 # LLM for inference
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
 
+# main db engine
+from sqlalchemy.ext.asyncio import AsyncEngine
+
 class ObservationRepository():
     """
     The absolute base class holding all dependencies required for observation tracking.
     Helper classes will inherit from this class.
     """
 
-    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient):
+    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient, main_db_engine: AsyncEngine):
         self.droidrun_client = droidrun_client
         self.llm_client = llm_client
+        self.main_db_engine = main_db_engine
         # TODO: add more dependencies as service expands.
