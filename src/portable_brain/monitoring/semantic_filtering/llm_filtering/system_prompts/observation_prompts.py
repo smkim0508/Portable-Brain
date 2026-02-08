@@ -1,6 +1,6 @@
 # system prompts for creating or updating observation via LLM
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, get_args
 
 # action and observation DTOs
 from portable_brain.monitoring.background_tasks.types.observation.observations import (
@@ -17,6 +17,9 @@ class ObservationPrompts():
     System prompt for creating or updating observation.
     """
 
+    # Dynamically generate action types string from Action union
+    _action_types_str = ", ".join([f"{{{{{cls.__name__}}}}}" for cls in get_args(Action)])
+
     # very lightweight test system and user prompts
     test_system_prompt = """
     You are a helpful AI assistant that helps users track their preferences, behaviors, and experiences on a device.
@@ -32,31 +35,25 @@ class ObservationPrompts():
         The following are the recent sequence of actions:
         {action}
         """
-    
+
     test_user_prompt = """
     I want to track my preferences, behaviors, and experiences on a device.
     """
 
-    create_new_observation_system_prompt = """
+    create_new_observation_system_prompt = f"""
     You are an expert behavioral analyst for a personal AI assistant. Analyze sequences of user actions on a mobile device to extract meaningful semantic observations about behavior, preferences, and patterns.
 
     CORE TASK & OUTPUT SCHEMA
     Return ONLY valid JSON (no extra text, no markdown, no comments). Use double-quoted keys/strings and no trailing commas.
 
-    {
+    {{
     "observation_node": "A concise 1-2 sentence description of the observed pattern, or null if no meaningful pattern exists.",
     "reasoning": "Step-by-step thought process analyzing the actions, including examination of action types, targets, timing, patterns, significance, and final conclusion."
-    }
+    }}
 
     INPUTS YOU WILL RECEIVE
     - actions: list[Action] - A sequence of user actions with metadata (type, timestamp, targets, importance, etc.)
-    - Action types include:
-    • {{AppSwitchAction}}: switching between applications (src_package -> dst_package)
-    • {{InstagramMessageSentAction}}: Instagram DM sent (actor_username, target_username)
-    • {{InstagramPostLikedAction}}: Instagram post engagement (actor_username, target_username)
-    • {{WhatsAppMessageSentAction}}: WhatsApp message sent (recipient_name, target_name, is_dm)
-    • {{SlackMessageSentAction}}: Slack message sent (workspace_name, channel_name, target_name, is_dm)
-    • {{UnknownAction}}: unclassified or low-signal actions (importance: 0.0)
+    - Action types: {_action_types_str}
 
     GLOBAL GUARDRAILS (STRICT)
     - Pattern-Based Only: Create observations ONLY from recurring behaviors, sequences, or preferences (not isolated incidents).
@@ -499,28 +496,22 @@ class ObservationPrompts():
     Be thorough, follow the methodology strictly, prefer the most shopper-relevant leaf level when options mix depths, fan-in all applicable paths for a chosen leaf, and return only the JSON object.
     """
 
-    update_existing_observation_system_prompt = """
+    update_existing_observation_system_prompt = f"""
     You are an expert behavioral analyst for a personal AI assistant. Analyze new user actions to determine if they extend/refine an existing observation OR constitute an entirely new behavioral pattern.
 
     CORE TASK & OUTPUT SCHEMA
     Return ONLY valid JSON (no extra text, no markdown, no comments). Use double-quoted keys/strings and no trailing commas.
 
-    {
+    {{
     "updated_observation_node": "A refined 1-2 sentence description incorporating new evidence, or null if new actions do not refine this observation.",
     "is_updated": true,
     "reasoning": "Step-by-step thought process comparing new actions to existing observation, analyzing whether actions extend the pattern, and final decision on update vs. new observation."
-    }
+    }}
 
     INPUTS YOU WILL RECEIVE
     - existing_observation: str - The current observation text describing an established behavioral pattern
     - new_actions: list[Action] - Recent user actions that may relate to or diverge from the existing observation
-    - Action types include:
-    • {{AppSwitchAction}}: switching between applications (src_package -> dst_package)
-    • {{InstagramMessageSentAction}}: Instagram DM sent (actor_username, target_username)
-    • {{InstagramPostLikedAction}}: Instagram post engagement (actor_username, target_username)
-    • {{WhatsAppMessageSentAction}}: WhatsApp message sent (recipient_name, target_name, is_dm)
-    • {{SlackMessageSentAction}}: Slack message sent (workspace_name, channel_name, target_name, is_dm)
-    • {{UnknownAction}}: unclassified or low-signal actions (importance: 0.0)
+    - Action types: {_action_types_str}
 
     GLOBAL GUARDRAILS (STRICT)
     - Conservative Update Policy: Only update if new actions genuinely refine, extend, or strengthen the existing observation.
