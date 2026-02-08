@@ -233,15 +233,16 @@ class ObservationTracker(ObservationRepository):
 
         # create new observation or update previous
         new_observation: Observation | None = None
+        updated_observation: Observation | None = None # conditionally update
         if last_observation:
             # if we have a recent observation, either update it or create new
             # compare previous observation in the context of recent actions
-            
-            # logic for looking at recent actions and making a meaningful observation
-            pass
-        else:
-            # otherwise, create a new observation unconditionally
-            pass
+            updated_observation = await self.inferencer.update_observation(last_observation, recent_actions)
+        if not updated_observation:
+            # if we reach here, then either no last observation, or there is nothing to update
+            # -> create new observation; look at recent actions and make a meaningful observation
+            updated_observation = await self.inferencer.create_new_observation(recent_actions)
+        new_observation = updated_observation # may still be None
 
         # create new observation w/ inferencer
         logger.info(f"Creating new observation from recent actions.")

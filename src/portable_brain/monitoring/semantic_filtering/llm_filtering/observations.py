@@ -56,11 +56,6 @@ class ObservationInferencer(ObservationRepository):
         this is the high-level helper, calling specialized agents to perform filtering and edge/node creation.
         """
 
-        # for now, unconditional test
-        # edge = await self.llm_client.acreate(
-        #     # TODO: fill in prompt, schema
-        # )
-
         new_observation_response: NewObservationLLMResponse = await self.llm_client.acreate(
             system_prompt=ObservationPrompts.create_new_observation_system_prompt,
             user_prompt=ObservationPrompts.get_create_new_observation_user_prompt(actions),
@@ -75,17 +70,40 @@ class ObservationInferencer(ObservationRepository):
         if not observation_node:
             return None
         
+        # if there is an observation to be made, classify it.
+        
         # format into observation
+        # TODO: the observation type should depend on the observation node, possibly inferenced together.
         new_observation = ShortTermPreferencesObservation(
             id=str(uuid.uuid4()),
             created_at=datetime.now(),
-            source_id="test_source_id",
+            source_id="test_source_id", # to be updated
             edge=None,
             node=observation_node,
             recurrence=1,
             importance=1.0
         )
-
         # TODO: need some way to fetch observation and update edge, node details, and recurrence info
 
         return new_observation
+    
+    async def update_observation(self, observation: Observation, actions: list[Action]) -> Optional[Observation]:
+        """
+        Updates an old observation OR returns None if no meaningful observation can be inferred.
+        """
+        # TODO: complete this
+
+        # updated_observation_response = await self.llm_client.acreate(
+        #     system_prompt=ObservationPrompts.update_observation_system_prompt,
+        #     user_prompt=ObservationPrompts.get_update_observation_user_prompt(observation, actions),
+        #     response_model=UpdatedObservationLLMResponse
+        # )
+
+        # parse response and log
+        # updated_observation_node = updated_observation_response.updated_observation_node
+        # reasoning = updated_observation_response.reasoning
+        # logger.info(f"new observation llm response: {updated_observation_node}, reasoning: {reasoning}")
+        
+        # if not updated_observation_node:
+        #     return None
+
