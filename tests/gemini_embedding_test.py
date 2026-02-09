@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -25,12 +26,14 @@ google_api_key = os.getenv("GOOGLE_GENAI_API_KEY")
 client = genai.Client(api_key=google_api_key)
 
 result = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents= [
-            "What is the meaning of life?",
-            "What is the purpose of existence?",
-            "How do I bake a cake?"
-        ]
+    model="gemini-embedding-001",
+    contents=[
+        "What is the meaning of life?",
+        "What is the purpose of existence?",
+        "How do I bake a cake?",
+    ],
+    # NOTE: content type changes the embedding vectors as well
+    config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
 )
 
 if result and result.embeddings:
