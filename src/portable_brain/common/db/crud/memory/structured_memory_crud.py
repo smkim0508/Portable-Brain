@@ -19,12 +19,14 @@ async def save_observation_to_structured_memory(observation: Observation, main_d
     - Uses async sessionmaker to create session.
     - SQLAlchemy allows ORM mapped operations.
     """
-    main_session_maker = get_async_session_maker(main_db_engine)
-    try:
-        async with main_session_maker() as session:
-            # TODO: validate the sqlalchemy db logic below
-            session.add(observation)
-            await session.commit()
-            await session.refresh(observation)
-    except Exception as e:
-        logger.warning(f"Failed to save observation to database: {e}")
+    pass # NOTE: for now, disbale saving to db, only text log
+    # TODO: should only store people / temoral memory
+    # main_session_maker = get_async_session_maker(main_db_engine)
+    # try:
+    #     async with main_session_maker() as session:
+    #         # TODO: validate the sqlalchemy db logic below
+    #         session.add(observation)
+    #         await session.commit()
+    #         await session.refresh(observation)
+    # except Exception as e:
+    #     logger.warning(f"Failed to save observation to database: {e}")
