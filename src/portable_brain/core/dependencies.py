@@ -3,6 +3,7 @@ from portable_brain.common.logging.logger import logger
 from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncEngine
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient, TypedLLMProtocol
+from portable_brain.common.services.embedding_service.text_embedding import TypedTextEmbeddingClient
 from portable_brain.common.services.llm_service.llm_client.google_genai_client import AsyncGenAITypedClient
 from portable_brain.common.services.droidrun_tools import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
@@ -15,13 +16,13 @@ def get_main_db_engine(request: Request) -> AsyncEngine:
     """
     return request.app.state.main_db_engine
 
-def get_gemini_llm_client(request: Request) -> TypedLLMProtocol:
+def get_gemini_llm_client(request: Request) -> TypedLLMClient:
     """
     FastAPI dependency to get the shared Google GenAI LLM client from the application state.
     """
     return request.app.state.gemini_llm_client
 
-def get_nova_llm_client(request: Request) -> TypedLLMProtocol:
+def get_nova_llm_client(request: Request) -> TypedLLMClient:
     """
     FastAPI dependency to get the shared Amazon Nova LLM client from the application state.
     """
@@ -38,3 +39,9 @@ def get_observation_tracker(request: Request) -> ObservationTracker:
     FastAPI dependency to get the shared observation tracker from the application state.
     """
     return request.app.state.observation_tracker
+
+def get_gemini_text_embedding_client(request: Request) -> TypedTextEmbeddingClient:
+    """
+    FastAPI dependency to get the shared Google Gen AI text embedding client from the application state.
+    """
+    return request.app.state.gemini_text_embedding_client

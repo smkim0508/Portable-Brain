@@ -17,7 +17,7 @@ from portable_brain.common.services.embedding_service.text_embedding.protocols i
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-class GoogleGenAIEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProviderInfo):
+class AsyncGenAITextEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProviderInfo):
     """
     Core Google GenAI Embedding Client.
     """

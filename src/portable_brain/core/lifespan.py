@@ -4,8 +4,10 @@ from portable_brain.config.app_config import get_service_settings
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import create_db_engine_context, parse_db_settings_from_service, DBSettings, DBType
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient, TypedLLMProtocol, LLMProvider
+from portable_brain.common.services.embedding_service.text_embedding import TypedTextEmbeddingClient, TextEmbeddingProvider
 from portable_brain.common.services.llm_service.llm_client.google_genai_client import AsyncGenAITypedClient
 from portable_brain.common.services.llm_service.llm_client.amazon_nova_client import AsyncAmazonNovaTypedClient
+from portable_brain.common.services.embedding_service.text_embedding.gemini_embedding_client import AsyncGenAITextEmbeddingClient
 from portable_brain.common.services.droidrun_tools import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 
@@ -54,6 +56,12 @@ async def lifespan(app: FastAPI):
         typed_nova_llm_client = TypedLLMClient(provider=LLMProvider.AMAZON_NOVA, client=nova_llm_client)
         app.state.nova_llm_client = typed_nova_llm_client
         logger.info(f"LLM client (AMAZON NOVA) initialized.")
+
+        # Text embedding models, for now only Google GenAI
+        gemini_text_embedding_client = AsyncGenAITextEmbeddingClient(api_key=settings.GOOGLE_GENAI_API_KEY)
+        typed_gemini_text_embedding_client = TypedTextEmbeddingClient(provider=TextEmbeddingProvider.GOOGLE_GENAI, client=gemini_text_embedding_client)
+        app.state.gemini_text_embedding_client = typed_gemini_text_embedding_client
+        logger.info(f"Text embedding client (GOOGLE GENAI) initialized.")
 
         # DroidRun SDK client (uses same Google GenAI LLM via load_llm)
         droidrun_client = DroidRunClient(api_key=settings.GOOGLE_GENAI_API_KEY)
