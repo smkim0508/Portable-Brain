@@ -1,5 +1,6 @@
 # protocals for LLM clients
 
+from google.genai.types import ContentEmbedding
 from typing import Protocol, TypeVar, Type, runtime_checkable
 from pydantic import BaseModel
 from enum import Enum
@@ -12,7 +13,7 @@ class TypedTextEmbeddingProtocol(Protocol):
         self,
         text: str,
         **kwargs
-    ) -> PydanticModel: ...
+    ) -> list[list[float]]: ...
 
 # NOTE: this rate limit provider is not currently in use, for future purposes.
 class RateLimitProvider(str, Enum):

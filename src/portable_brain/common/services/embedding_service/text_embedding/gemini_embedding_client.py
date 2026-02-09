@@ -47,7 +47,7 @@ class GoogleGenAIEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProviderInf
             reraise=True,
         )
 
-    async def aembed_text(self, text: list[str]) -> list[ContentEmbedding]:
+    async def aembed_text(self, text: list[str]) -> list[list[float]]:
         """
         Converts list of text strings into embedding vectors.
         Returns one ContentEmbedding per input text.
@@ -59,14 +59,21 @@ class GoogleGenAIEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProviderInf
             attempt_count += 1
             with attempt:
                 try:
-                    # NOTE: not asynchronous yet
-                    result = self.client.models.embed_content(
+                    # uses async model
+                    result = await self.client.aio.models.embed_content(
                         model=self.model,
                         contents=text, # type: ignore[arg-type] # GenAI SDK accepts list[str] at runtime
                         config=types.EmbedContentConfig(task_type=self.content_type),
                     )
-                    if result and result.embeddings:
-                        return result.embeddings
+                    if result:
+                        embeddings: List[ContentEmbedding] | None = result.embeddings
+                        if embeddings:
+                            # return list of embedding vectors (float), filtering out None embeddings
+                            return [
+                                embedding.values
+                                for embedding in embeddings
+                                if embedding is not None and embedding.values is not None
+                            ]
                     raise ValueError("No embeddings returned from API")
                 except Exception as e:
                     last_exception = e
