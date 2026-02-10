@@ -2,8 +2,9 @@ from portable_brain.common.db.models.base import MainDB_Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import time
-# TODO: import tables
+# TODO: import all table models as expanded to register them with MainDB_Base.metadata
 from portable_brain.common.db.models.memory.structured_storage import StructuredMemory
+from portable_brain.common.db.models.memory.text_embeddings import TextEmbeddingLogs
 
 from dotenv import load_dotenv
 import os
