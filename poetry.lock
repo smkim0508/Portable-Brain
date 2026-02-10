@@ -3299,6 +3299,21 @@ test = ["appdirs", "more_itertools", "packaging", "pygments", "pytest (>=6,!=8.1
 type = ["pytest-mypy"]
 
 [[package]]
+name = "pgvector"
+version = "0.4.2"
+description = "pgvector support for Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pgvector-0.4.2-py3-none-any.whl", hash = "sha256:549d45f7a18593783d5eec609ea1684a724ba8405c4cb182a0b2b08aeff04e08"},
+    {file = "pgvector-0.4.2.tar.gz", hash = "sha256:322cac0c1dc5d41c9ecf782bd9991b7966685dee3a00bc873631391ed949513a"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "pillow"
 version = "12.0.0"
 description = "Python Imaging Library (fork)"
@@ -5463,4 +5478,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "d2fc2f67472cae89362daee28c31a1d4f220f6246e0d46fd5a4ef42161479e62"
+content-hash = "47fdab540d3bdb6df7f2d1cc5f22090a6208bc5dfdce3e476ff0e7a4ca60bb5f"
