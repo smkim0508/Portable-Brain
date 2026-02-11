@@ -25,6 +25,7 @@ class AsyncGenAITextEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProvider
         self,
         model_name: str = "gemini-embedding-001", # google genai's default text embedding model
         content_type: str = "RETRIEVAL_DOCUMENT", # choose to differ embedding style, RETRIEVAL_DOCUMENT for text log context search
+        embedding_size: int = 3072, # default embedding size of 3072, use smaller for more compact
         *,
         api_key: str | None = None,
         retry_attempts: int = 2,
@@ -37,6 +38,7 @@ class AsyncGenAITextEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProvider
         self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
         self.content_type = content_type
+        self.embedding_size = embedding_size
         # Provider metadata for reporting
         self.provider = RateLimitProvider.GOOGLE
         self.model = model_name
@@ -63,7 +65,8 @@ class AsyncGenAITextEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProvider
                     result = await self.client.aio.models.embed_content(
                         model=self.model,
                         contents=text, # type: ignore[arg-type] # GenAI SDK accepts list[str] at runtime
-                        config=types.EmbedContentConfig(task_type=self.content_type),
+                        # sets configs: task type and embedding size
+                        config=types.EmbedContentConfig(task_type=self.content_type, output_dimensionality=self.embedding_size),
                     )
                     if result:
                         embeddings: List[ContentEmbedding] | None = result.embeddings
