@@ -1,7 +1,7 @@
 # test route to fetch data from droidrun client or observation tracker
 
 import time
-from fastapi import APIRouter, Depends, Response, status, HTTPException, Query
+from fastapi import APIRouter, Depends, Response, status, Query
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import get_async_session_maker
 # dependencies
@@ -24,11 +24,46 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 # response models
 from portable_brain.api.response_models.tests import TestResponse, SimilarEmbeddingResponse
 # request body models
-from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest, SimilarEmbeddingRequest
+from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest, SimilarEmbeddingRequest, ReplayScenarioRequest
+# fixtures
+from portable_brain.monitoring.fixtures.action_scenarios import SCENARIOS
 # crud
 from portable_brain.common.db.crud.memory.text_embeddings_crud import find_similar_embeddings
 
 router = APIRouter(prefix="/tracker-test", tags=["Tests"])
+
+@router.post("/replay-scenario")
+async def replay_scenario(
+    request: ReplayScenarioRequest,
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    """
+    Replays a predefined action scenario through the observation tracker.
+    Useful for testing the full memory pipeline without a real device.
+    Available scenarios: instagram_close_friend_messaging, morning_work_app_routine,
+    cross_platform_contact_communication, instagram_fitness_content_browsing.
+    """
+    actions = SCENARIOS[request.scenario_name]()
+    logger.info(f"Replaying scenario '{request.scenario_name}' with {len(actions)} actions")
+
+    await observation_tracker.replay_action_sequence(actions)
+
+    observations = observation_tracker.observations
+    return {
+        "scenario_name": request.scenario_name,
+        "actions_replayed": len(actions),
+        "observations_generated": len(observations),
+        "observations": [
+            {
+                "id": obs.id,
+                "node": obs.node,
+                "memory_type": obs.memory_type.value,
+                "importance": obs.importance,
+                "created_at": obs.created_at.isoformat() if obs.created_at else None,
+            }
+            for obs in observations
+        ],
+    }
 
 @router.get("/get-raw-tree")
 async def get_raw_accessibility_tree(
