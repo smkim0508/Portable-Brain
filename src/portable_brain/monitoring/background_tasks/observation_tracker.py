@@ -32,13 +32,21 @@ from portable_brain.monitoring.background_tasks.types.observation.observations i
     ShortTermPreferencesObservation,
     ShortTermContentObservation
 )
-# helper to persist memory in db
+# helper to persist memory in structured db
 from portable_brain.common.db.crud.memory.structured_memory_crud import save_observation_to_structured_memory
+# helper to persis memory in text log (vector db) NOTE: used implicitly by generator client right now
+from portable_brain.common.db.crud.memory.text_embeddings_crud import save_text_embedding_log
 
 # LLM for inference
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
 # helper class to infer observations
 from portable_brain.monitoring.semantic_filtering.llm_filtering.observations import ObservationInferencer
+
+# Text embedding client for generation
+from portable_brain.common.services.embedding_service.text_embedding import TypedTextEmbeddingClient
+# helper class to generate embeddings
+from portable_brain.monitoring.embedding_manager.text_embeddings.generate_embeddings import EmbeddingGenerator
+
 # data structrue to track only recent information
 from collections import deque
 # async engine for db
@@ -57,12 +65,13 @@ class ObservationTracker(ObservationRepository):
     - Also create canonical DTO for observations and enums for actions
     """
 
-    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient, main_db_engine: AsyncEngine):
+    def __init__(self, droidrun_client: DroidRunClient, llm_client: TypedLLMClient, text_embedding_client: TypedTextEmbeddingClient, main_db_engine: AsyncEngine):
         # NOTE: if tracker holds any additional dependencies in the future, the items from repository needs to be re-initialized.
         super().__init__(droidrun_client=droidrun_client, llm_client=llm_client, main_db_engine=main_db_engine)
         # track the 50 most recent inferred actions
         self.inferred_actions: deque[Action] = deque(maxlen=50)
-        self.action_context_size: int = 10 # number of previous actions to track before attempting to infer an observation
+        # NOTE: should be 10, lowered for testing
+        self.action_context_size: int = 3 # number of previous actions to track before attempting to infer an observation
         self.action_counter: int = 0 # counter to track the number of actions since last observation
         # track the 20 most recent high-level observations based on inferred actions
         # NOTE: observations look at prev. records to update
@@ -73,6 +82,8 @@ class ObservationTracker(ObservationRepository):
         self._tracking_task: Optional[asyncio.Task] = None
         # observation helper
         self.inferencer = ObservationInferencer(droidrun_client=self.droidrun_client, llm_client=self.llm_client, main_db_engine=self.main_db_engine)
+        # embedding helper NOTE: embedding client is not a core dependency of observation tracker.
+        self.embedding_generator = EmbeddingGenerator(embedding_client=text_embedding_client, main_db_engine=self.main_db_engine)
 
     async def start_tracking(self, poll_interval: float = 1.0):
         """
@@ -261,11 +272,16 @@ class ObservationTracker(ObservationRepository):
         """
 
         # evict old observation from local history
-        # NOTE: we're not truly evicting yet (max history is 20), but we update the current last observation to DB
+        # NOTE: we're not truly evicting yet (max history is 20, for debugging), but we update the current last observation to DB
         old_observation = self.observations[-1]
         if old_observation:
-            # let helper save observation to structured memory
-            await save_observation_to_structured_memory(new_observation, self.main_db_engine)
+            # let helper save old observation to structured memory
+            await save_observation_to_structured_memory(old_observation, self.main_db_engine)
+            logger.info(f"Successfully saved old observation to STRUCTURED MEMORY: {old_observation.node}")
+            # also saves to text log (semantic vector db) NOTE: this logic might be temporary.
+            # we also use a convenience wrapper that handles both embedding generation and saving; should separate in future.
+            await self.embedding_generator.generate_and_save_embedding(observation_id=old_observation.id, observation_text=old_observation.node)
+            logger.info(f"Successfully saved old observation to TEXT LOG: {old_observation.node}")
         # saves new observation to local history
         self.observations.append(new_observation)
             

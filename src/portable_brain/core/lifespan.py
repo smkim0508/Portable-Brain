@@ -84,6 +84,7 @@ async def lifespan(app: FastAPI):
         observation_tracker = ObservationTracker(
             droidrun_client=droidrun_client,
             llm_client=typed_gemini_llm_client,
+            text_embedding_client=typed_gemini_text_embedding_client,
             main_db_engine=app.state.main_db_engine
         )
         app.state.observation_tracker = observation_tracker

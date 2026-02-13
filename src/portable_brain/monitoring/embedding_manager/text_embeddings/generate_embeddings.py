@@ -7,7 +7,9 @@ from portable_brain.common.logging.logger import logger
 class EmbeddingGenerator(EmbeddingRepository):
     """
     Helper to generate and persist text embeddings for observation nodes.
-    NOTE: inherits from ObservationRepository for dependencies.
+    NOTE: inherits from EmbeddingRepository for dependencies.
+
+    TODO: connect w/ actual pipeline to generate embedding from observation and store into db
     """
 
     async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
@@ -38,7 +40,11 @@ class EmbeddingGenerator(EmbeddingRepository):
 
         Returns:
             The embedding vector
+
+        NOTE: this is just a temporary helper for convenience during testing.
+        In the future, should invoke generator and saver separately.
         """
+        # embeds only one observation, so take the first element from list of size 1
         embeddings = await self.embedding_client.aembed_text([observation_text])
         embedding_vector = embeddings[0]
 
