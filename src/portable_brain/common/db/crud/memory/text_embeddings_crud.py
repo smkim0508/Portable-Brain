@@ -43,7 +43,6 @@ async def save_text_embedding_log(
         logger.error(f"Failed to save text embedding: {e}")
         raise
 
-
 async def find_similar_embeddings(
     query_vector: list[float],
     limit: int,
@@ -98,7 +97,6 @@ async def find_similar_embeddings(
         logger.error(f"Failed to find similar embeddings: {e}")
         raise
 
-
 async def get_embedding_by_observation_id(
     observation_id: str,
     main_db_engine: AsyncEngine
@@ -124,7 +122,6 @@ async def get_embedding_by_observation_id(
     except Exception as e:
         logger.error(f"Failed to get embedding by ID: {e}")
         raise
-
 
 async def delete_embedding_by_observation_id(
     observation_id: str,
