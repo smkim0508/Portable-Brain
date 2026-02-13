@@ -280,7 +280,7 @@ class ObservationTracker(ObservationRepository):
             # NOTE: temporarily disabled, until textlog completed and clearer memory structure is defined.
             # await save_observation_to_structured_memory(old_observation, self.main_db_engine)
             # logger.info(f"Successfully saved old observation to STRUCTURED MEMORY: {old_observation.node}")
-            
+
             # also saves to text log (semantic vector db) NOTE: this logic might be temporary.
             # we also use a convenience wrapper that handles both embedding generation and saving; should separate in future.
             await self.embedding_generator.generate_and_save_embedding(observation_id=old_observation.id, observation_text=old_observation.node)
@@ -441,10 +441,23 @@ class ObservationTracker(ObservationRepository):
                 try:
                     await self._tracking_task
                 except asyncio.CancelledError:
-                    pass  # Expected
+                    pass # Expected
 
         # Clear the task reference after cleanup
         self._tracking_task = None
+
+        # Flush the latest observation to db, since it's never saved by normal flow
+        # NOTE: _save_observation() only persists the *previous* observation when a new one is created.
+        if self.observations:
+            last_observation = self.observations[-1]
+            try:
+                await self.embedding_generator.generate_and_save_embedding(
+                    observation_id=last_observation.id,
+                    observation_text=last_observation.node
+                )
+                logger.info(f"Flushed last observation to TEXT LOG on shutdown: {last_observation.node}")
+            except Exception as e:
+                logger.error(f"Failed to flush last observation on shutdown: {e}")
     
     async def create_test_observation(self, context_size: int = 10) -> Optional[Observation]:
         """
