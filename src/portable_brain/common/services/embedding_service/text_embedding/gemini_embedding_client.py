@@ -25,7 +25,7 @@ class AsyncGenAITextEmbeddingClient(TypedTextEmbeddingProtocol, ProvidesProvider
         self,
         model_name: str = "gemini-embedding-001", # google genai's default text embedding model
         content_type: str = "RETRIEVAL_DOCUMENT", # choose to differ embedding style, RETRIEVAL_DOCUMENT for text log context search
-        embedding_size: int = 3072, # default embedding size of 3072, use smaller for more compact
+        embedding_size: int = 1536, # NOTE: use at max 1536 embeddings for now, since pgvector supports upto 2000 dims. Default is 3072, could be explored later.
         *,
         api_key: str | None = None,
         retry_attempts: int = 2,

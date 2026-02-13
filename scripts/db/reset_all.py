@@ -1,5 +1,5 @@
 from portable_brain.common.db.models.base import MainDB_Base
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import time
 # TODO: import all table models as expanded to register them with MainDB_Base.metadata
@@ -10,37 +10,13 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-def create_all_tables(engine):
-    # warn users if they don't want to commit this action
-    print(
-        f"""
-        CREATING ALL TABLES FOR MAIN DB IN 3 SEC...
-        PLEASE ABORT NOW IF YOU'D LIKE TO STOP!!!
-        """
-    )
-    time.sleep(3)
+# import creation and deletion scripts
+from scripts.db.create_tables import create_all_tables
+from scripts.db.delete_tables import delete_all_tables
 
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-        conn.commit()
-
-    MainDB_Base.metadata.create_all(engine, checkfirst=True)
-    print("Tables created successfully!")
-
-def create_table(table_name, engine):
-    print(f"WARNING: THIS WILL CREATE TABLE *{table_name}* IN THE MAIN DB (IF IT DOESN'T EXIST ALREADY) IN 3 SECONDS, PLEASE DOUBLE CHECK!!")
-    time.sleep(3)
-    
-    try:
-        table = MainDB_Base.metadata.tables[table_name]
-    except KeyError:
-        raise ValueError(f"Table '{table_name}' not found in metadata")
-
-    table.create(engine, checkfirst=True)
-    print(f"Created table {table_name}")
-    
+# NOTE: trouble shooting: if script imports do not work, use PYTHONPATH=. to explicitly include root of project
 if __name__ == "__main__":
-    # one-off script to create tables
+    # one-off script to reset db, by deleting then creating all tables
 
     # load in the proper .env file, defaulted to .env.dev
     APP_ENV = os.getenv("APP_ENV", "dev")
@@ -71,4 +47,7 @@ if __name__ == "__main__":
         print(f"Error connecting to database: {e}")
         exit(1)
 
+    # NOTE: this is the actual logic to reset: edit as needed
+    delete_all_tables(engine)
     create_all_tables(engine)
+    print(f"All tables reset successfully!")
