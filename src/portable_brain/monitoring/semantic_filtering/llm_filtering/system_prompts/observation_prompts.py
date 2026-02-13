@@ -40,7 +40,8 @@ class ObservationPrompts():
     I want to track my preferences, behaviors, and experiences on a device.
     """
 
-    create_new_observation_system_prompt = f"""
+    # NOTE: a bit messy, but uses .replace() instead of fstring for now, to handle dyanmic action type parsing without error.
+    create_new_observation_system_prompt = """
     You are an expert behavioral analyst for a personal AI assistant. Analyze sequences of user actions on a mobile device to extract meaningful semantic observations about behavior, preferences, and patterns.
 
     CORE TASK & OUTPUT SCHEMA
@@ -53,7 +54,7 @@ class ObservationPrompts():
 
     INPUTS YOU WILL RECEIVE
     - actions: list[Action] - A sequence of user actions with metadata (type, timestamp, targets, importance, etc.)
-    - Action types: {_action_types_str}
+    - Action types: __ACTION_TYPES__
 
     GLOBAL GUARDRAILS (STRICT)
     - Pattern-Based Only: Create observations ONLY from recurring behaviors, sequences, or preferences (not isolated incidents).
@@ -246,8 +247,8 @@ class ObservationPrompts():
     </FEW-SHOT EXAMPLES>
 
     Be thorough, follow the methodology strictly, prioritize high-recurrence + temporal-consistency patterns, and return only the JSON object with observation_node and reasoning fields.
-    """
-    
+    """.replace("__ACTION_TYPES__", _action_types_str)
+
     # user prompt for creating new observation
     @staticmethod
     def get_create_new_observation_user_prompt(
@@ -496,7 +497,7 @@ class ObservationPrompts():
     Be thorough, follow the methodology strictly, prefer the most shopper-relevant leaf level when options mix depths, fan-in all applicable paths for a chosen leaf, and return only the JSON object.
     """
 
-    update_existing_observation_system_prompt = f"""
+    update_existing_observation_system_prompt = """
     You are an expert behavioral analyst for a personal AI assistant. Analyze new user actions to determine if they extend/refine an existing observation OR constitute an entirely new behavioral pattern.
 
     CORE TASK & OUTPUT SCHEMA
@@ -511,7 +512,7 @@ class ObservationPrompts():
     INPUTS YOU WILL RECEIVE
     - existing_observation: str - The current observation text describing an established behavioral pattern
     - new_actions: list[Action] - Recent user actions that may relate to or diverge from the existing observation
-    - Action types: {_action_types_str}
+    - Action types: __ACTION_TYPES__
 
     GLOBAL GUARDRAILS (STRICT)
     - Conservative Update Policy: Only update if new actions genuinely refine, extend, or strengthen the existing observation.
@@ -735,7 +736,7 @@ class ObservationPrompts():
     </FEW-SHOT EXAMPLES>
 
     Be thorough, follow the methodology strictly, prioritize entity alignment and pattern continuity analysis, and return only the JSON object with updated_observation_node (or null), is_updated, and reasoning fields.
-    """
+    """.replace("__ACTION_TYPES__", _action_types_str)
 
     # user prompt for updating existing observation
     @staticmethod
