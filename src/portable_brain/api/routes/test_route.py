@@ -4,23 +4,27 @@ import time
 from fastapi import APIRouter, Depends, Response, status, HTTPException, Query
 from portable_brain.common.logging.logger import logger
 from portable_brain.common.db.session import get_async_session_maker
+# dependencies
 from portable_brain.core.dependencies import (
     get_main_db_engine,
     get_droidrun_client,
     get_gemini_llm_client,
     get_nova_llm_client,
-    get_observation_tracker
+    get_observation_tracker,
+    get_gemini_text_embedding_client
 )
+# services and clients
 from portable_brain.common.services.droidrun_tools.droidrun_client import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 from portable_brain.common.services.llm_service.llm_client import TypedLLMClient
+from portable_brain.common.services.embedding_service.text_embedding import TypedTextEmbeddingClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 # response models
 from portable_brain.api.response_models.tests import TestResponse
 # request body models
-from portable_brain.api.request_models.tests import TestRequest
+from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest
 
 router = APIRouter(prefix="/test", tags=["Tests"])
 
@@ -141,3 +145,21 @@ async def get_droidrun_state(
     except Exception as e:
         logger.error(f"Error fetching raw UI state: {e}")
         return {"message": f"Error fetching raw UI state from DroidRun: {e}"}, 500
+
+@router.post("/test-text-embedding")
+async def test_text_embedding(
+    request: TestEmbeddingRequest,
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+    embedding_client: TypedTextEmbeddingClient = Depends(get_gemini_text_embedding_client),
+    main_db_engine: AsyncEngine = Depends(get_main_db_engine)
+):
+    # parse request
+    observation_id = request.observation_id
+    test_embedding_text = request.embedding_text
+    # attempt to force tracker to generate and save embedding using convenience helper
+    try:
+        await observation_tracker.embedding_generator.generate_and_save_embedding(observation_id=observation_id, observation_text=request.embedding_text)
+        return {"message": "successfully tested text embedding!"}
+    except Exception as e:
+        logger.error(f"Error testing text embedding: {e}")
+        return {"message": f"Error testing text embedding: {e}"}, 500
