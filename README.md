@@ -23,6 +23,15 @@ Your second brain living inside carry-on devices. Memory and context orchestrati
 ### Dependencies
 This project uses [poetry](https://python-poetry.org/) to manage dependencies. Please use `poetry add <dependency-group>` to add a new dependency to the project. If your dependencies are out-of-sync, use `poetry install` to fetch the latest version defined by `pyproject.toml` and `poetry.lock`.
 
+### LLM Service
+This project currently supports two family of LLM models: `Google Gemini` and `Amazon Nova`. 
+Please reference `common/services/llm_service/...` for more explanation on retryable LLM client set up and universal `TypedLLMClient` wrapper.
+
+### Vector DB / Text Embedding Service
+This project currently uses baseline `pgvector` extension for PostgreSQL as the main vector db, though subject to expansion in the future. The main text embedding model used is `gemini-embedding-001`, provided by Google's Gemini family.
+- The text log memory uses `DOCUMENT_RETRIEVAL` task type.
+Please reference `common/services/embedding_service/...` for more details on usage and universal typed client wrapper.
+
 ### DroidRun Client + Tracker Implementation (scratch space currently)
 #### DroidRun Client
 general commands:
