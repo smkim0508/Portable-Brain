@@ -1,5 +1,7 @@
 # Portable-Brain
-Your second brain living inside carry-on devices. Memory and context orchestration based on day-to-day [smartphone] HCI observations & habits (derived from low-level signals).
+Your second brain living inside carry-on devices. Memory and context orchestration based on day-to-day [smartphone] HCI observations & habits (derived from low-level signals). 
+
+Contextualizes the `Who? What? When? How?` and more that lacks when commanding modern smartphone assistants.
 
 ### How to Run (Locally):
 - Use uvicorn + FastAPI set up to run the service locally.
@@ -68,6 +70,8 @@ helpers:
 - clear_observations
 - start_background_tracking (wrapper to start tracking as a background task w/ async couroutine)
 - stop_tracking (cleans up any currently running tasks and sets running status to false)
+
+TODO: should use a separate context extractor depending on the app. Allows for more robust handling of app-specific data when forming inferred actions with better safety.
 
 #### High-level Distinction + Tasks
 1. Observation Tracker makes constant note of state change.
