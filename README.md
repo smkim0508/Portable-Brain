@@ -66,25 +66,51 @@ helpers:
 2. Then, if there is a state change, uses internal helper to create inferred action.
     - This internal helper should use canonical inferred action DTO
 
-**LAST COMPLETION
 3. The inferred action, alongside UI change diffs, is stored as a final observation (i.e. the nodes of memory representation).
-    - TODO: the final observation should be universal for both observed/inferred actions and actions actually executed via commands from DroidRun Agent (TBD in future).
-    - i.e. the observation should also become a DTO, just a wrapper to hold both the action (whether inferred or executed by user command) + ui state change (a.k.a. the outcome of action), and any supporting metadata.
+    - i.e. the observation DTO, holds both the action (whether inferred or executed by user command) + ui state change (a.k.a. the outcome of action), and any supporting metadata.
 **The above hierarchy of observations, state changes, actions, will help to keep a clean history of HCI data log.
 
+Additional considerations and notes on observation & memory:
+TODO: need a more robust handling of ui state data to make dynamic actions (without messy, unsafe access to raw tree fields)
+    - should have two abstractions for updating observations
+        1. keep the recent 2 observations subject to updating (if current context of actions are relevant then update, if not we append new) and only add to memory once new observations push it out of recent
+        2. some way to fetch memory via RAG, and update the node in memory if relevant, or create new observation
+
+        no need to make a new observation tracker instance + cache at every request, since we're only tracking ONE device.
+        - all the helpers should inherit from observation_repository and split up
+
+    **start w/ the distinction of what is short vs long term memory
+    - because what should constitute "short" term pattern? it could be one-off...
+        - could take a greedy approach to storing short term observation w/ ttl...maybe use redis
+        - or... model short term memory w/ a dict representation (in-memory or cache) s.t. we eagerly keep track of recurrence
+
+    send a funny basketball video to kevin
+    - long term:
+        - which kevin? - relation to the semantic relationship between me and kevin (two entities)
+        - send how/where? - also derived as a sub property under kevin's relationship
+    - short term:
+        - what is the funny basketball video? (from pool of recent context, organized into structured classes)
+
+    if short vs long term memory serve fundamentally different purpose and have varying structures, how to model each?
+    - important: short -> long term memory relationship should exist, this can be the proprietary method of adding to long term memory
+        - probably also need alternative methods, since we can't always wait for a really long time, and also somethings should be initialized/inferred from context
+            - e.g. if I refer to someone as my "boss" in email, they should automatically be appended to my long term people memory
+    - each node in short term memory should have ttl
+        - 
+    - long term memory should also be dynamic, to new changes that conflict w/ known information
 
 **TODO: need a way to cleanly get metadata from UI states when referencing UI changes for specific apps. E.g. need to somehow store "username" for instagram UI changes so that it can be referenced in app.
 - complete create_observation() helper
 - complete filling in all inferred_action pathways
 - also note the separation of concerns: droidrun client only tracks the latest two state changes (for diff) and observation tracker client keep a history of 10 most recent state changes for higher-level inference on possible actions / observations.
-
+- need to expand droidrun client
 
 ### Autonomous NL Query Eecution
 - The service currently supports both Google GenAI client and Amazon Nova models.
 - Current stage of autonomous execution is provided by the DroidRun client, which navigates and handles natural language query.
 - TBD: memory service will eventually hold autonomous execution pipelines to handle processing on top of droidrun.
 
-#### TODO:
+#### Next Project Milestones:
 - Experiment with Portal APK client for data parsing, implement filters
 - Test natural language query capabilities for DroidRun Agent (w/ "Kevin" example)
 
