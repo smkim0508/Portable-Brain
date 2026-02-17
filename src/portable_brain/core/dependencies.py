@@ -45,3 +45,9 @@ def get_gemini_text_embedding_client(request: Request) -> TypedTextEmbeddingClie
     FastAPI dependency to get the shared Google Gen AI text embedding client from the application state.
     """
     return request.app.state.gemini_text_embedding_client
+
+def get_tool_calling_agent(request: Request) -> str:
+    """
+    FastAPI dependency to get the shared tool calling agent from the application state.
+    """
+    return request.app.state.tool_calling_agent
