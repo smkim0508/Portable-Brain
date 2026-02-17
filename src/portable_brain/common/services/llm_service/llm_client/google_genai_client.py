@@ -14,6 +14,9 @@ from .protocols import RateLimitProvider
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+# logger to debug tool calling
+from portable_brain.common.logging.logger import logger
+
 # NOTE: this uses the public Gemini API with an API key, not Vertex AI.
 # Set up this client with API key during app initialization
 # TODO: "strict" JSON/Pydantic output is only supported for Vertex AI clients; set up manual validation to catch malformed JSON outputs before crashing Pydantic validation, or loosen validation.
@@ -150,6 +153,7 @@ class AsyncGenAITypedClient(TypedLLMProtocol, ProvidesProviderInfo):
             # LLM requested a tool call, dispatch to the appropriate executor
             tool_name = tool_call.name
             tool_args = dict(tool_call.args) if tool_call.args else {}
+            logger.info(f"[atool_call] Turn {_turn + 1}: LLM called '{tool_name}' with args: {tool_args}")
 
             if tool_name not in tool_executors:
                 raise ValueError(f"LLM requested unknown tool '{tool_name}'. Available: {list(tool_executors.keys())}")

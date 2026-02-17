@@ -20,11 +20,14 @@ class ToolCallingAgent():
     
     # test helper to connect with droidrun
     def test_tool_call(self):
-        # come up with dummy system prompt
-        test_system_prompt = "You are a helpful assistant."
-        test_user_prompt = "Tell me my device name."
-        
-        # execute a baseline command to verify that LLM is able to call droidrun
+        test_system_prompt = (
+            "You are an AI agent that controls the user's Android phone. "
+            "You have access to the execute_command tool which lets you perform actions on the device. "
+            "You MUST use the execute_command tool to carry out any request about the device. "
+            "Always use the tool first, then respond with the result."
+        )
+        test_user_prompt = "What is the name of my device? Use execute_command to find out."
+
         return self.llm_client.atool_call(
             system_prompt=test_system_prompt,
             user_prompt=test_user_prompt,

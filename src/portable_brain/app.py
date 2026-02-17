@@ -29,6 +29,7 @@ from portable_brain.api.routes.tests.db_test_route import router as db_test_rout
 from portable_brain.api.routes.tests.llm_test_route import router as llm_test_router
 from portable_brain.api.routes.tests.embedding_test_route import router as embedding_test_router
 from portable_brain.api.routes.tests.observation_tracker_test_route import router as observation_tracker_test_router
+from portable_brain.api.routes.tests.execution_test_route import router as execution_test_router
 # monitoring routes
 from portable_brain.api.routes.monitoring_background_tasks import router as monitoring_router
 
@@ -71,6 +72,7 @@ app.include_router(db_test_router)
 app.include_router(llm_test_router)
 app.include_router(embedding_test_router)
 app.include_router(observation_tracker_test_router)
+app.include_router(execution_test_router)
 # monitoring routes
 app.include_router(monitoring_router)
 
