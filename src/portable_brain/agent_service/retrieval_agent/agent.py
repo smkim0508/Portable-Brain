@@ -9,6 +9,8 @@ from portable_brain.memory.main_retriever import MemoryRetriever
 from portable_brain.agent_service.common.tool_calling_declarations.memory_retriever import memory_retriever_declarations
 # import system prompts
 from portable_brain.agent_service.common.system_prompts.memory_retrieval_prompts import MemoryRetrievalPrompts
+# LLM output schema
+from portable_brain.agent_service.common.types.llm_outputs.memory_retrieval_outputs import MemoryRetrievalLLMOutput
 
 class RetrievalAgent():
     """
@@ -50,12 +52,13 @@ class RetrievalAgent():
     def test_retrieve(self, user_request: str):
         """
         Test helper to run a single retrieval pass against memory.
-        Returns the LLM's final text response (expected to be MemoryRetrievalOutput JSON).
+        Returns the LLM's final text response (expected to be MemoryRetrievalLLMOutput JSON).
         """
         return self.llm_client.atool_call(
             system_prompt=MemoryRetrievalPrompts.memory_retrieval_system_prompt,
             user_prompt=user_request,
             function_declarations=memory_retriever_declarations,
             tool_executors=self._build_tool_executors(),
+            response_model=MemoryRetrievalLLMOutput,
             max_turns=5,
         )

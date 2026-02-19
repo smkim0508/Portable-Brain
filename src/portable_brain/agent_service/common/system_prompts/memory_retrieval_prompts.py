@@ -92,7 +92,7 @@ class MemoryRetrievalPrompts():
     - If any required information is still missing after all queries, explicitly flag it as unresolved.
 
     OUTPUT FORMAT
-    Your final response MUST be valid JSON matching this exact schema (MemoryRetrievalOutput):
+    Your final response MUST be valid JSON matching this exact schema (MemoryRetrievalLLMOutput):
     {
         "context_summary": <string>,   // Natural language paragraph of all relevant facts retrieved from memory.
                                         // Written so the execution agent can use it directly.
@@ -282,7 +282,7 @@ class MemoryRetrievalPrompts():
     - Avoid Redundant Queries: In re-retrieval mode, always check retrieval_state.previous_queries before calling a tool. Do not repeat the exact same call with the same parameters.
     - Prioritize Specificity: Start with type-specific tools (get_people_relationships, get_long_term_preferences, etc.) before falling back to cross-type search or semantic search.
     - Limit Re-retrieval Depth: If you are on iteration 3+ and still cannot resolve the missing information, it likely does not exist in memory. Flag it as unresolved and return what you have.
-    - Output Must Be Complete: Always produce valid JSON matching the MemoryRetrievalOutput schema with all five fields (context_summary, inferred_intent, reasoning, unresolved, retrieval_log), even if some are empty lists.
+    - Output Must Be Complete: Always produce valid JSON matching the MemoryRetrievalLLMOutput schema with all five fields (context_summary, inferred_intent, reasoning, unresolved, retrieval_log), even if some are empty lists.
 
     Remember: Your output feeds directly into the execution agent. The quality of the execution depends entirely on the quality of your retrieval. Be thorough, be precise, and never guess.
     """

@@ -21,4 +21,4 @@ class MainOrchestrator():
         # define any state variables/metadata
         self.retrieval_state: RetrievalState
 
-    # TODO: make optional pydantic support for atool_call() then build this loop
+    # TODO: build this loop

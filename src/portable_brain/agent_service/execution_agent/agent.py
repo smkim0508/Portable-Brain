@@ -8,6 +8,8 @@ from portable_brain.common.services.llm_service.llm_client.google_genai_client i
 from portable_brain.agent_service.common.tool_calling_declarations.droidrun_execution import droidrun_execution_declaration
 # import system prompts
 from portable_brain.agent_service.common.system_prompts.device_execution_prompts import *
+# LLM output schema
+from portable_brain.agent_service.common.types.llm_outputs.execution_outputs import ExecutionLLMOutput
 
 class ExecutionAgent():
     """
@@ -62,6 +64,7 @@ class ExecutionAgent():
             user_prompt=user_prompt,
             function_declarations=[droidrun_execution_declaration],
             tool_executors={"execute_command": self.droidrun_client.execute_command},
-            max_turns=5
+            response_model=ExecutionLLMOutput,
+            max_turns=5,
         )
 
