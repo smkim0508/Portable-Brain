@@ -26,7 +26,7 @@ from portable_brain.config.app_config import get_service_settings
 
 settings = get_service_settings()
 
-router = APIRouter(prefix="/execution-test", tags=["Tests"])
+router = APIRouter(prefix="/execution-test", tags=["Agent Tests"])
 
 @router.post("/tool-call")
 async def test_tool_call(
