@@ -73,7 +73,7 @@ class RetrievalAgent():
         Returns the LLM's final text response (expected to be MemoryRetrievalLLMOutput JSON).
         """
         return await self.llm_client.atool_call(
-            system_prompt=MemoryRetrievalPrompts.memory_retrieval_system_prompt,
+            system_prompt=MemoryRetrievalPrompts.memory_retrieval_system_prompt_for_testing,
             user_prompt=user_request,
             function_declarations=memory_retriever_declarations_for_testing,
             tool_executors=self._build_tool_executors_for_testing(),
