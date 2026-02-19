@@ -26,24 +26,36 @@ async def test_tool_call(
     tool_calling_agent: ExecutionAgent = Depends(get_execution_agent)
 ):
     """
-    Test route: Gemini tool-calls DroidRun's execute_command with a custom user prompt.
+    Test route: Gemini tool-calls DroidRun's execute_command with a custom user request.
     """
     result = await tool_calling_agent.test_tool_call(request.user_request)
     logger.info(f"Tool call test result: {result}")
     return {"result": result}
 
-@router.post("/rag-execution-test")
+@router.post("/orchestrated-execution-test")
 async def rag_execution_test(
-    request: ToolCallRequest, # TODO update this request param
+    request: ToolCallRequest,
     execution_agent: ExecutionAgent = Depends(get_execution_agent),
     retrieval_agent: RetrievalAgent = Depends(get_retrieval_agent)
 ):
     """
-    Test route: Gemini tool-calls DroidRun's execute_command with a custom user prompt.
+    Tests the main orchestration logic and full retrieval-execution loop.
+    - Takes custom user request to be parsed and executed via augmented context.
     """
     main_orchestrator = MainOrchestrator(execution_agent, retrieval_agent)
     result = await main_orchestrator.run(request.user_request)
     logger.info(f"RAG execution test result: {result}")
     return {"result": result}
 
-# TODO: finish building this test api and the baseline
+@router.post("/no-context-execution-test")
+async def direct_execution_test(
+    request: ToolCallRequest,
+    execution_agent: ExecutionAgent = Depends(get_execution_agent)
+):
+    """
+    Tests JUST the baseline droidrun's execution without any augmented context.
+    """
+    
+    result = await execution_agent.mocked_execute_command(request.user_request)
+    logger.info(f"Direct execution test result: {result}")
+    return {"result": result}

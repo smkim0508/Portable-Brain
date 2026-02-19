@@ -50,10 +50,10 @@ class ExecutionAgent():
             max_turns=5
         )
     
-    # another placeholder test that uses the full system prompt minus the context
+    # baseline test: full prompt structure but no augmented context
     async def mocked_execute_command(self, user_request: str):
         return await self.llm_client.atool_call(
-            system_prompt=DeviceExecutionPrompts.device_execution_system_prompt,
+            system_prompt=DeviceExecutionPrompts.direct_execution_system_prompt,
             user_prompt=user_request,
             function_declarations=[droidrun_execution_declaration],
             tool_executors={"execute_command": self.droidrun_client.execute_command},
