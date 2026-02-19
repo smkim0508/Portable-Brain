@@ -11,6 +11,8 @@ from portable_brain.common.services.embedding_service.text_embedding.gemini_embe
 from portable_brain.common.services.droidrun_tools import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 from portable_brain.agent_service.execution_agent.agent import ExecutionAgent
+from portable_brain.agent_service.retrieval_agent.agent import RetrievalAgent
+from portable_brain.memory.main_retriever import MemoryRetriever
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,12 +93,28 @@ async def lifespan(app: FastAPI):
         app.state.observation_tracker = observation_tracker
         logger.info(f"Background observation tracker initialized.")
 
+        # Memory retriever interface
+        memory_retriever = MemoryRetriever(
+            main_db_engine=app.state.main_db_engine
+        )
+        app.state.memory_retriever = memory_retriever
+        logger.info(f"Memory retriever initialized.")
+
+        # Execution agent
         execution_agent = ExecutionAgent(
             droidrun_client=droidrun_client,
             gemini_llm_client=gemini_llm_client # NOTE: not the general typed client, only gemini has atool_call() method
         )
         app.state.execution_agent = execution_agent
         logger.info(f"Execution agent initialized.")
+
+        # Retrieval agent
+        retrieval_agent = RetrievalAgent(
+            memory_retriever=memory_retriever,
+            gemini_llm_client=gemini_llm_client # NOTE: not the general typed client, only gemini has atool_call() method
+        )
+        app.state.retrieval_agent = retrieval_agent
+        logger.info(f"Retrieval agent initialized.")
 
         try:
             # lets FastAPI process requests during yield

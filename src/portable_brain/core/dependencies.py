@@ -9,6 +9,7 @@ from portable_brain.common.services.droidrun_tools import DroidRunClient
 from portable_brain.monitoring.background_tasks.observation_tracker import ObservationTracker
 from portable_brain.agent_service.execution_agent.agent import ExecutionAgent
 from portable_brain.agent_service.retrieval_agent.agent import RetrievalAgent
+from portable_brain.memory.main_retriever import MemoryRetriever
 
 # This is the location to conveniently return any app lifetime dependencies to be used in routes
 # TODO: add more dependencies as needed
@@ -53,3 +54,15 @@ def get_execution_agent(request: Request) -> ExecutionAgent:
     FastAPI dependency to get the shared execution agent from the application state.
     """
     return request.app.state.execution_agent
+
+def get_retrieval_agent(request: Request) -> RetrievalAgent:
+    """
+    FastAPI dependency to get the shared retrieval agent from the application state.
+    """
+    return request.app.state.retrieval_agent
+
+def get_memory_retriever(request: Request) -> MemoryRetriever:
+    """
+    FastAPI dependency to get the shared memory retriever from the application state.
+    """
+    return request.app.state.memory_retriever

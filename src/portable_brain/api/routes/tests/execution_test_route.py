@@ -3,8 +3,17 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from portable_brain.common.logging.logger import logger
-from portable_brain.core.dependencies import get_execution_agent
+
+# agents
 from portable_brain.agent_service.execution_agent.agent import ExecutionAgent
+from portable_brain.agent_service.retrieval_agent.agent import RetrievalAgent
+from portable_brain.agent_service.orchestrator.main_orchestrator import MainOrchestrator
+
+# dependencies
+from portable_brain.core.dependencies import (
+    get_execution_agent,
+    get_retrieval_agent
+)
 
 router = APIRouter(prefix="/execution-test", tags=["Tests"])
 
@@ -21,4 +30,18 @@ async def test_tool_call(
     """
     result = await tool_calling_agent.test_tool_call(request.user_prompt)
     logger.info(f"Tool call test result: {result}")
+    return {"result": result}
+
+@router.post("/rag-execution-test")
+async def rag_execution_test(
+    request: ToolCallRequest, # TODO update this request param
+    execution_agent: ExecutionAgent = Depends(get_execution_agent),
+    retrieval_agent: RetrievalAgent = Depends(get_retrieval_agent)
+):
+    """
+    Test route: Gemini tool-calls DroidRun's execute_command with a custom user prompt.
+    """
+    main_orchestrator = MainOrchestrator(execution_agent, retrieval_agent)
+    result = await main_orchestrator.run(request.user_prompt)
+    logger.info(f"RAG execution test result: {result}")
     return {"result": result}
