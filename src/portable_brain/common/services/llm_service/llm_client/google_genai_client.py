@@ -174,7 +174,14 @@ class AsyncGenAITypedClient(TypedLLMProtocol, ProvidesProviderInfo):
             # execute the tool
             try:
                 result = await tool_executors[tool_name](**tool_args)
-                tool_response = {"result": result}
+                # ensure tool result is JSON-serializable for the LLM
+                # NOTE: objects like DroidRun's ResultEvent have broken __repr__, so use __dict__ fallback
+                if isinstance(result, (dict, list, str, int, float, bool, type(None))):
+                    tool_response = {"result": result}
+                elif hasattr(result, '__dict__'):
+                    tool_response = {"result": result.__dict__}
+                else:
+                    tool_response = {"result": repr(result)}
             except Exception as e:
                 # send the error back to the LLM so it can recover or explain
                 tool_response = {"error": str(e)}
