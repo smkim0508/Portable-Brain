@@ -102,6 +102,18 @@ class AsyncGenAITypedClient(TypedLLMProtocol, ProvidesProviderInfo):
             f"retryer likely yielded no final exception and no success. last_exc={type(last_exception).__name__ if last_exception else None}"
         )
     
+    def _make_serializable(self, obj: Any) -> Any:
+        """Recursively convert tool results into JSON-serializable primitives."""
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return obj
+        if isinstance(obj, dict):
+            return {k: self._make_serializable(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [self._make_serializable(item) for item in obj]
+        if hasattr(obj, '__dict__'):
+            return {k: self._make_serializable(v) for k, v in obj.__dict__.items() if not k.startswith('_')}
+        return str(obj)
+
     async def atool_call(
         self,
         system_prompt: str,
@@ -159,8 +171,8 @@ class AsyncGenAITypedClient(TypedLLMProtocol, ProvidesProviderInfo):
                     # NOTE: need to add retry logic if this fails in production
                     try:
                         return response_model.model_validate_json(text)
-                    except:
-                        logger.warning(f"Failed to validate LLM response as {response_model.__name__}. Returning raw text.")
+                    except Exception as validation_error:
+                        logger.warning(f"Failed to validate LLM response as {response_model.__name__}: {validation_error}\nRaw LLM output: {text}")
                 return text
 
             # LLM requested a tool call, dispatch to the appropriate executor
@@ -174,14 +186,7 @@ class AsyncGenAITypedClient(TypedLLMProtocol, ProvidesProviderInfo):
             # execute the tool
             try:
                 result = await tool_executors[tool_name](**tool_args)
-                # ensure tool result is JSON-serializable for the LLM
-                # NOTE: objects like DroidRun's ResultEvent have broken __repr__, so use __dict__ fallback
-                if isinstance(result, (dict, list, str, int, float, bool, type(None))):
-                    tool_response = {"result": result}
-                elif hasattr(result, '__dict__'):
-                    tool_response = {"result": result.__dict__}
-                else:
-                    tool_response = {"result": repr(result)}
+                tool_response = {"result": self._make_serializable(result)}
             except Exception as e:
                 # send the error back to the LLM so it can recover or explain
                 tool_response = {"error": str(e)}
