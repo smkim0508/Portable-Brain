@@ -4,8 +4,11 @@
 # holds the tool calling agent and memory context retrieval layer
 # initialized request-scope, holds necessary metadata during execution loop
 
+# main agents
 from portable_brain.agent_service.execution_agent.agent import ExecutionAgent
 from portable_brain.agent_service.retrieval_agent.agent import RetrievalAgent
+# types
+from portable_brain.agent_service.common.types.llm_outputs.memory_retrieval_outputs import MemoryRetrievalOutput, RetrievalState
 
 class MainOrchestrator():
     """
@@ -13,5 +16,9 @@ class MainOrchestrator():
     - The orchestrator is initialize request-scope, and holds necessary metadata during a single request loop.
     """
     def __init__(self, execution_agent: ExecutionAgent, retrieval_agent: RetrievalAgent):
-        self.execution_agent = execution_agent
-        self.retrieval_agent = retrieval_agent
+        self.execution_agent: ExecutionAgent = execution_agent
+        self.retrieval_agent: RetrievalAgent = retrieval_agent
+        # define any state variables/metadata
+        self.retrieval_state: RetrievalState
+
+    # TODO: make optional pydantic support for atool_call() then build this loop
