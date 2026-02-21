@@ -234,15 +234,14 @@ class DroidRunClient:
         state_after = self._format_raw_ui_state(state_after_raw)
 
         # Record action for memory agent
-        # TODO: use DTO instead of serializing state
         action_record = {
             "timestamp": datetime.now().isoformat(),
             "command": enriched_command,
             "success": result.success,
             "reason": result.reason,
             "steps": result.steps,
-            "state_before": self._serialize_state(state_before_raw), # needs change
-            "state_after": self._serialize_state(state_after_raw), # needs change
+            "state_before": state_before,
+            "state_after": state_after,
             "change_type": self._classify_change(state_before, state_after),
         }
 
@@ -490,7 +489,15 @@ class DroidRunClient:
         if limit:
             actions = actions[-limit:]
 
-        return actions
+        # serialize UIState DTOs at the boundary
+        return [
+            {
+                **a,
+                "state_before": a["state_before"].model_dump() if isinstance(a.get("state_before"), UIState) else a.get("state_before"),
+                "state_after": a["state_after"].model_dump() if isinstance(a.get("state_after"), UIState) else a.get("state_after"),
+            }
+            for a in actions
+        ]
 
     def clear_action_history(self) -> None:
         """Clear action history (useful after persisting to database)."""
@@ -538,23 +545,6 @@ class DroidRunClient:
 
         return current_state
     
-    def _serialize_state(self, state: Tuple) -> Dict[str, Any]:
-        """
-        Convert state tuple to serializable dict.
-
-        State tuple format: (formatted_text, focused_element, ui_elements, phone_state)
-        """
-        if not state or len(state) < 4:
-            return {}
-
-        return {
-            "package": state[3].get("packageName", ""),
-            "activity": state[3].get("currentApp", ""),
-            "element_count": len(state[2]),
-            "is_editable": state[3].get("isEditable", False),
-            "focused": state[1] if state[1] else None,
-        }
-
     def _classify_change(self, before: UIState, after: UIState) -> StateChangeType:
         """
         Classify type of UI change between two states.
