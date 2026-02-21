@@ -47,6 +47,8 @@ from portable_brain.monitoring.background_tasks.types.action.actions import (
     SlackMessageSentAction,
     # TBD
 )
+# Execution Result DTO
+from portable_brain.common.services.droidrun_tools.common.execution_types import ExecutionResult
 
 def ensure_connected(func):
     """
@@ -137,7 +139,7 @@ class DroidRunClient:
 
         # Track last known state for change detection
         self.last_state: UIState | None = None
-        self.action_history: List[Dict[str, Any]] = []
+        self.execution_history: list[ExecutionResult] = []
 
         self._connected = False
 
@@ -233,19 +235,20 @@ class DroidRunClient:
         state_after_raw = await self.tools.get_state()
         state_after = self._format_raw_ui_state(state_after_raw)
 
-        # Record action for memory agent
-        action_record = {
-            "timestamp": datetime.now().isoformat(),
-            "command": enriched_command,
-            "success": result.success,
-            "reason": result.reason,
-            "steps": result.steps,
-            "state_before": state_before,
-            "state_after": state_after,
-            "change_type": self._classify_change(state_before, state_after),
-        }
+        # Record execution for memory agent
+        execution_record = ExecutionResult(
+            timestamp=datetime.now(),
+            command=enriched_command,
+            success=result.success,
+            reason=result.reason,
+            steps=result.steps,
+            state_before=state_before,
+            state_after=state_after,
+            change_type=self._classify_change(state_before, state_after),
+        )
 
-        self.action_history.append(action_record)
+        self.execution_history.append(execution_record)
+        # update states
         self.last_state = state_after
 
         return result
@@ -453,55 +456,38 @@ class DroidRunClient:
         return await self.tools.start_app(package, activity)
 
     # =====================================================================
-    # ACTION HISTORY (for memory updates)
+    # EXECUTION HISTORY (for memory updates)
     # =====================================================================
 
-    def get_action_history(
+    def get_execution_history(
         self,
         limit: Optional[int] = None,
         notable_only: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[ExecutionResult]:
         """
-        Get recent action history for memory updates.
+        Get recent execution history for memory updates.
 
         Args:
-            limit: Max number of actions to return (None = all)
+            limit: Max number of executions to return (None = all)
             notable_only: Only return notable changes (app switches, screen changes)
 
         Returns:
-            List of action records with timestamps, commands, state changes
-
-        Example:
-            recent_actions = client.get_action_history(limit=10, notable_only=True)
-            for action in recent_actions:
-                if action['change_type'] in ['app_switch', 'screen_change']:
-                    # Update memory graph
-                    pass
+            List of ExecutionResult DTOs
         """
-        actions = self.action_history
+        results = self.execution_history
 
         if notable_only:
-            actions = [
-                a for a in actions
-                if a.get("change_type") in ["app_switch", "screen_change", "major_layout_change"]
-            ]
+            notable_types = {StateChangeType.APP_SWITCH, StateChangeType.SCREEN_CHANGE, StateChangeType.MAJOR_LAYOUT_CHANGE}
+            results = [r for r in results if r.change_type in notable_types]
 
         if limit:
-            actions = actions[-limit:]
+            results = results[-limit:]
 
-        # serialize UIState DTOs at the boundary
-        return [
-            {
-                **a,
-                "state_before": a["state_before"].model_dump() if isinstance(a.get("state_before"), UIState) else a.get("state_before"),
-                "state_after": a["state_after"].model_dump() if isinstance(a.get("state_after"), UIState) else a.get("state_after"),
-            }
-            for a in actions
-        ]
+        return results
 
-    def clear_action_history(self) -> None:
-        """Clear action history (useful after persisting to database)."""
-        self.action_history = []
+    def clear_execution_history(self) -> None:
+        """Clear execution history (useful after persisting to database)."""
+        self.execution_history = []
 
     # =====================================================================
     # HELPER METHODS

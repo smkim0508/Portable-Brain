@@ -59,7 +59,7 @@ class ObservationTracker(ObservationRepository):
     - Client refers to the main DroidRunClient instance.
     - The client's helper are used to detect state changes.
 
-    Complements DroidRunClient.action_history which only tracks agent-executed actions via execute_command()
+    Complements DroidRunClient.execution_history which only tracks agent-executed actions via execute_command()
 
     TODO: finish implementing this tracker.
     - Also create canonical DTO for observations and enums for actions
