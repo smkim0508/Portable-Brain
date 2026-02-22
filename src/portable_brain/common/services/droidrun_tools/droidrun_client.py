@@ -303,6 +303,7 @@ class DroidRunClient:
         """
 
         # Get processed state
+        # NOTE: the DroidRun SDK returns as a tuple, so we unpack and handle it as a dict for more reliable downstream processing
         formatted_text, focused_element, ui_elements, phone_state = (
             await self.tools.get_state()
         )
@@ -539,9 +540,7 @@ class DroidRunClient:
         current_state = UIState(
             state_id=state_id,
             package=raw_state[3]["packageName"],
-            # activity=raw_state[3]["activity"],
-            # NOTE: temporarily disabled activity storage.
-            activity=UIActivity(activity="dummy"),
+            activity=UIActivity(activity=raw_state[3].get("activityName", "unknown")),
             ui_elements=raw_state[2],
             focused_element=focused_element,
             raw_tree=raw_tree,
