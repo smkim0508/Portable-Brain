@@ -139,6 +139,15 @@ class ObservationTracker(ObservationRepository):
         Returns an Action object, based on change type and state metadata.
         Returns UnknownAction if action can't be inferred.
         """
+        # TODO: this is deprecated, need to resolve pre-inference of actions with rule-based classification 
+        return UnknownAction(
+            timestamp=change.timestamp,
+            source_change_type=change.change_type,
+            package=change.after.package,
+            source=change.source,
+            importance=0.0, # TEMP: for unknown actions, we override importance to 0.0
+            description=change.description,
+        )
 
         # parse change
         change_type: StateChangeType = change.change_type

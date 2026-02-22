@@ -4,9 +4,18 @@ from enum import Enum
 
 class StateChangeType(str, Enum):
     """
+    Classification for whether there is a meaningful state change or not.
+    Only APP_SWITCH is determinstic, so this is stored and later appened to snapshot history.
+    """
+    APP_SWITCH = "app_switch"
+    NO_CHANGE = "no_change"
+    CHANGED = "changed"
+
+class SemanticStateChangeType(str, Enum):
+    """
     Low-level classifications for different UI changes.
     Used to infer high-level actions.
-    TODO: add more change types
+    NOTE: depracted right now, left for potential future usage
     """
     APP_SWITCH = "app_switch"
     SCREEN_CHANGE = "screen_change"

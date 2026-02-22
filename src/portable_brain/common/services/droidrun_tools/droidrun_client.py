@@ -496,7 +496,7 @@ class DroidRunClient:
         results = self.execution_history
 
         if notable_only:
-            notable_types = {StateChangeType.APP_SWITCH, StateChangeType.SCREEN_CHANGE, StateChangeType.MAJOR_LAYOUT_CHANGE}
+            notable_types = {StateChangeType.APP_SWITCH, StateChangeType.CHANGED}
             results = [r for r in results if r.change_type in notable_types]
 
         if limit:
@@ -550,42 +550,32 @@ class DroidRunClient:
 
     def _classify_change(self, before: UIState, after: UIState) -> StateChangeType:
         """
-        Classify type of UI change between two states.
+        NOTE: Classifies only whether a state diff is notable or not.
+        - The only deterministic state change we can filter for is app switch.
+        - The rest are processed downstream as natural language by the observation inferencer.
+        - APP_SWITCH is appened to the history as a clear, intermediate signal for switch.
 
         Returns:
             An enum for the change type:
-            'no_change', 'app_switch', 'screen_change', 'major_layout_change', 'unknown',
-            'minor_layout_change', 'content_navigation', 'screen_navigation', 'text_input'
+            'changed', 'no_change', 'app_switch'
         """
 
         before_pkg = before.package
         after_pkg = after.package
 
-        # No change
+        # case 1) app switch
+        if before_pkg != after_pkg:
+            return StateChangeType.APP_SWITCH
+        
+        # case 2) there is no meaningful change
+        # NOTE: we're being very narrow about NO_CHANGE condition to ensure we try to capture as many changes as possible
+        # TBD, may need more aggresive filtering to reduce observation inference tokens.
         if (
             before_pkg == after_pkg and \
             before.activity == after.activity and \
             before.focused_element == after.focused_element
-            # NOTE: add more conditions to compare, or simply compare two UIStates ==
         ):
             return StateChangeType.NO_CHANGE
 
-        # App switch
-        if before_pkg != after_pkg:
-            return StateChangeType.APP_SWITCH
-
-        # Screen change (different activity)
-        if before.activity != after.activity:
-            return StateChangeType.SCREEN_CHANGE
-
-        # Element count change
-        before_count = len(before.ui_elements)
-        after_count = len(after.ui_elements)
-        diff = abs(before_count - after_count)
-
-        if diff > 20:
-            return StateChangeType.MAJOR_LAYOUT_CHANGE
-        elif diff > 5:
-            return StateChangeType.MINOR_LAYOUT_CHANGE
-        else:
-            return StateChangeType.CONTENT_NAVIGATION # NOTE: navigation is less than a minor layout change
+        # case 3) otherwise, assume there is a meaningful change
+        return StateChangeType.CHANGED
