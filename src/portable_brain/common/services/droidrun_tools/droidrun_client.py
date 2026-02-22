@@ -51,6 +51,9 @@ from portable_brain.monitoring.background_tasks.types.action.actions import (
 # Execution Result DTO
 from portable_brain.common.services.droidrun_tools.common.execution_types import ExecutionResult, RawExecutionResult
 
+# Tree parser
+from portable_brain.common.services.droidrun_tools.a11y_tree_parser import denoise_formatted_text
+
 def ensure_connected(func):
     """
     Decorator to ensure DroidRun client is connected before executing method.

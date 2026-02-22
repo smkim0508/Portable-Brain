@@ -30,6 +30,9 @@ from portable_brain.monitoring.fixtures.action_scenarios import SCENARIOS
 # crud
 from portable_brain.common.db.crud.memory.text_embeddings_crud import find_similar_embeddings
 
+# helper to compress raw tree
+from portable_brain.common.services.droidrun_tools.a11y_tree_parser import denoise_formatted_text
+
 router = APIRouter(prefix="/tracker-test", tags=["Tests"])
 
 @router.post("/replay-scenario")
@@ -100,7 +103,6 @@ async def get_raw_accessibility_tree(
         logger.error(f"Error fetching raw accessibility tree: {e}")
         return {"message": f"Error fetching raw accessibility tree: {e}"}, 500
 
-
 @router.get("/get-droidrun-state")
 async def get_droidrun_state(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client)
@@ -121,3 +123,30 @@ async def get_droidrun_state(
     except Exception as e:
         logger.error(f"Error fetching raw UI state: {e}")
         return {"message": f"Error fetching raw UI state from DroidRun: {e}"}, 500
+
+@router.get("/get-formatted-tree")
+async def get_formatted_tree(
+    droidrun_client: DroidRunClient = Depends(get_droidrun_client)
+):
+    """
+    Fetches the formatted accessibility tree from the current screen.
+    Cleans up the formatted_text field to make it easily human-readable.
+    """
+    try:
+        logger.info("Fetching formatted accessibility tree from current screen")
+        raw_state = await droidrun_client.get_raw_state()
+        state = await droidrun_client.get_current_state()
+
+        cleaned_text = denoise_formatted_text(raw_state)
+        raw_tree = await droidrun_client.get_raw_tree()
+
+        return {
+            "message": "Successfully retrieved formatted accessibility tree",
+            "cleaned_text": cleaned_text,
+            "formatted_text": state["formatted_text"],
+            "raw_tree": raw_tree
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching formatted accessibility tree: {e}")
+        return {"message": f"Error fetching formatted accessibility tree: {e}"}, 500
