@@ -26,7 +26,7 @@ from portable_brain.api.response_models.tests import TestResponse, SimilarEmbedd
 # request body models
 from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest, SimilarEmbeddingRequest, ReplayScenarioRequest
 # fixtures
-from portable_brain.monitoring.fixtures.action_scenarios import SCENARIOS
+from portable_brain.monitoring.fixtures.state_snapshot_scenarios import SNAPSHOT_SCENARIOS
 # crud
 from portable_brain.common.db.crud.memory.text_embeddings_crud import find_similar_embeddings
 
@@ -44,9 +44,9 @@ async def replay_scenario(
     Replays a predefined state snapshot scenario through the observation tracker.
     Useful for testing the full memory pipeline without a real device.
 
-    TODO: SCENARIOS fixtures need to be migrated from list[Action] to list[str] (state snapshots).
+    TODO: SNAPSHOT_SCENARIOS fixtures need to be migrated from list[Action] to list[str] (state snapshots).
     """
-    snapshots = SCENARIOS[request.scenario_name]()
+    snapshots = SNAPSHOT_SCENARIOS[request.scenario_name]()
     logger.info(f"Replaying scenario '{request.scenario_name}' with {len(snapshots)} snapshots")
 
     await observation_tracker.replay_state_snapshots(snapshots)

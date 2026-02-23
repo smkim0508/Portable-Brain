@@ -4,7 +4,7 @@ from enum import Enum
 from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import StateChangeSource
 from datetime import datetime, timezone, timedelta
 
-from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType
+from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType, SemanticStateChangeType
 
 class ActionBase(BaseModel):
     """
@@ -16,7 +16,7 @@ class ActionBase(BaseModel):
     """
     timestamp: datetime
     description: Optional[str] = None # human-readable description
-    source: StateChangeSource # propagated from changes in UI state
+    source: SemanticStateChangeType # propagated from changes in UI state
     importance: float = 1.0 # a score of how important this action is, from 0.0 to 1.0
     source_change_type: StateChangeType
     # NOTE: consider if all actions of the same type should have the same importance -> if not, how to best model?
