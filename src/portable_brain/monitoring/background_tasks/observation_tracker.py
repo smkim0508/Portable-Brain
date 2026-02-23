@@ -123,7 +123,7 @@ class ObservationTracker(ObservationRepository):
                         self.state_snapshots.append(f"APP SWITCH: from {change.before.package} to {change.after.package}")
 
                     # For both CHANGED and APP_SWITCH, should append the AFTER state's formatted_text field to state snapshots, alongside activity info
-                    self.state_snapshots.append(f"{change.after.formatted_text}\n • **Activity:** {change.after.activity.activity}")
+                    self.state_snapshots.append(f"{change.after.formatted_text}\n • **Activity:** {change.after.activity.activity_name}")
 
                     # no more fragile inference on actions
 

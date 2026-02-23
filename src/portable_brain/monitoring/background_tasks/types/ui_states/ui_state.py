@@ -11,7 +11,7 @@ class UIActivity(BaseModel):
     - A single package may have multiple activities.
     - A single activity may contain multiple UI components.
     """
-    activity: str
+    activity_name: str
 
 class UIState(BaseModel):
     """

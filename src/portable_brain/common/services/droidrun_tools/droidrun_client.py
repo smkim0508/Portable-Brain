@@ -544,7 +544,7 @@ class DroidRunClient:
         current_state = UIState(
             state_id=state_id,
             package=phone_state["packageName"],
-            activity=UIActivity(activity=phone_state.get("activityName", "unknown")),
+            activity=UIActivity(activity_name=phone_state.get("activityName", "unknown")),
             ui_elements=ui_elements,
             focused_element=focused_element,
             formatted_text=denoise_formatted_text(formatted_text),
