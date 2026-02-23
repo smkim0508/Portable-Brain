@@ -355,6 +355,30 @@ class ObservationTracker(ObservationRepository):
 
         return inferred_actions
 
+    def get_state_snapshots(
+        self,
+        limit: Optional[int] = None,
+    ) -> List[str]:
+        """
+        Get state snapshots history.
+        NOTE: only up to 50 recent snapshots are stored.
+
+        Args:
+            limit: Max snapshots to return
+
+        Returns:
+            List of state snapshot strings.
+            NOTE: the bottom index in returned list is the most recent, so return is reversed.
+        """
+        snapshots = list(self.state_snapshots)
+
+        if limit:
+            snapshots = snapshots[-limit:]
+
+        snapshots.reverse() # make the first snapshot the most recent
+
+        return snapshots
+
     def get_observations(
         self,
         limit: Optional[int] = None,
@@ -414,6 +438,7 @@ class ObservationTracker(ObservationRepository):
 
         return state_changes
 
+    # TODO: consider making these helpers be called during shutdown
     def clear_observations(self):
         """Clear observation history after persisting to DB."""
         self.observations.clear()
@@ -421,6 +446,10 @@ class ObservationTracker(ObservationRepository):
     def clear_inferred_actions(self):
         """Clear inferred action history after persisting to DB."""
         self.inferred_actions.clear()
+
+    def clear_state_snapshots(self):
+        """Clear state snapshots history after persisting to DB."""
+        self.state_snapshots.clear()
 
     def clear_state_changes(self):
         """Clear state change history after persisting to DB."""

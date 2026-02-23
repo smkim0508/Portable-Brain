@@ -124,6 +124,20 @@ def retrieve_inferred_actions(
         logger.error(f"Error retrieving inferred action history: {e}")
         return {"message": f"Error retrieving inferred action history: {e}"}, 500
 
+@router.get("get-state-snapshots")
+def retrieve_state_snapshots(
+    limit: Optional[int] = Query(default=None, ge=1, le=10),
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        # NOTE: only retrieve the most recent observations by limit
+        logger.info(f"Retrieving state snapshots with limit: {limit}")
+        snapshots = observation_tracker.get_state_snapshots(limit=limit)
+        return {"snapshots": snapshots}, 200
+    except Exception as e:
+        logger.error(f"Error retrieving state snapshots: {e}")
+        return {"message": f"Error retrieving state snapshots: {e}"}, 500
+
 @router.get("/monitoring-overview")
 def retrieve_monitoring_overview(
     droidrun_client: DroidRunClient = Depends(get_droidrun_client),
