@@ -5,6 +5,7 @@ from typing import Optional
 
 from portable_brain.common.db.models.memory.structured_storage import StructuredMemory
 from portable_brain.common.db.models.memory.text_embeddings import TextEmbeddingLogs
+from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 from portable_brain.common.services.embedding_service.text_embedding.dispatcher import TypedTextEmbeddingClient
 
 # structured memory fetch operations
@@ -18,6 +19,12 @@ from portable_brain.common.db.crud.memory.structured_memory_crud import (
 from portable_brain.common.db.crud.memory.text_embeddings_crud import (
     find_similar_embeddings,
     get_embedding_by_observation_id,
+)
+# people embeddings fetch operations
+from portable_brain.common.db.crud.memory.people_crud import (
+    get_person_by_id,
+    find_person_by_name,
+    find_similar_relationships,
 )
 
 class MemoryRetriever():
@@ -147,6 +154,53 @@ class MemoryRetriever():
             main_db_engine=self.main_db_engine,
             memory_type=memory_type,
             limit=limit,
+        )
+
+    # =====================================================================
+    # People Embeddings — Interpersonal relationship memory
+    # =====================================================================
+
+    async def get_person_by_id(
+        self,
+        person_id: str,
+    ) -> Optional[InterpersonalRelationship]:
+        """Look up a specific person's relationship record by their unique ID."""
+        return await get_person_by_id(
+            person_id=person_id,
+            main_db_engine=self.main_db_engine,
+        )
+
+    async def find_person_by_name(
+        self,
+        name: str,
+        similarity_threshold: float = 0.3,
+        limit: int = 10,
+    ) -> list[tuple[InterpersonalRelationship, float]]:
+        """
+        Fuzzy name lookup using trigram similarity. Handles typos, nicknames, and
+        partial names. Returns (record, similarity_score) tuples ordered by best match.
+        """
+        return await find_person_by_name(
+            name=name,
+            main_db_engine=self.main_db_engine,
+            similarity_threshold=similarity_threshold,
+            limit=limit,
+        )
+
+    async def find_similar_person_relationships(
+        self,
+        query: str,
+        limit: int = 5,
+    ) -> list[tuple[InterpersonalRelationship, float]]:
+        """
+        Semantic search over relationship descriptions using natural language.
+        Embeds the query internally and returns (record, cosine_distance) tuples.
+        """
+        query_vectors = await self.text_embedding_client.aembed_text(text=[query])
+        return await find_similar_relationships(
+            query_vector=query_vectors[0],
+            limit=limit,
+            main_db_engine=self.main_db_engine,
         )
 
     # =====================================================================

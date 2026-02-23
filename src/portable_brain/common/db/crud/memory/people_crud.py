@@ -1,6 +1,6 @@
 # CRUD for interpersonal_relationships memory
 from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy import select
+from sqlalchemy import select, func
 from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 from portable_brain.common.db.session import get_async_session_maker
 from portable_brain.common.logging.logger import logger
@@ -83,6 +83,48 @@ async def get_person_by_id(
             return result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"Failed to get person by id '{person_id}': {e}")
+        raise
+
+
+async def find_person_by_name(
+    name: str,
+    main_db_engine: AsyncEngine,
+    similarity_threshold: float = 0.3,
+    limit: int = 10,
+) -> list[tuple[InterpersonalRelationship, float]]:
+    """
+    Fuzzy name lookup using PostgreSQL trigram similarity (pg_trgm).
+    Results are ordered by descending similarity score.
+
+    Args:
+        name: The name to search for (handles typos, partial names, nicknames)
+        main_db_engine: Async database engine
+        similarity_threshold: Minimum similarity score 0–1 to include a result (default 0.3)
+        limit: Maximum number of results to return
+
+    Returns:
+        List of tuples (InterpersonalRelationship, similarity_score)
+    """
+    session_maker = get_async_session_maker(main_db_engine)
+    similarity = func.similarity(InterpersonalRelationship.full_name, name)
+
+    try:
+        async with session_maker() as session:
+            stmt = (
+                select(
+                    InterpersonalRelationship,
+                    similarity.label("similarity_score"),
+                )
+                .filter(similarity > similarity_threshold)
+                .order_by(similarity.desc())
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            rows = result.all()
+            logger.info(f"Found {len(rows)} people matching name '{name}'")
+            return [(row[0], row[1]) for row in rows]
+    except Exception as e:
+        logger.error(f"Failed to find person by name '{name}': {e}")
         raise
 
 

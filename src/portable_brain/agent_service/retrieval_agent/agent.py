@@ -50,6 +50,10 @@ class RetrievalAgent():
             "get_top_relevant_memories": self.memory_retriever.get_top_relevant_memories,
             "find_semantically_similar": self.memory_retriever.find_semantically_similar,
             "get_embedding_for_observation": self.memory_retriever.get_embedding_for_observation,
+            # people embeddings
+            "get_person_by_id": self.memory_retriever.get_person_by_id,
+            "find_person_by_name": self.memory_retriever.find_person_by_name,
+            "find_similar_person_relationships": self.memory_retriever.find_similar_person_relationships,
         }
     
     def _build_tool_executors_for_testing(self) -> dict:
@@ -68,6 +72,9 @@ class RetrievalAgent():
             # "get_top_relevant_memories": self.memory_retriever.get_top_relevant_memories,
             "find_semantically_similar": self.memory_retriever.find_semantically_similar,
             # "get_embedding_for_observation": self.memory_retriever.get_embedding_for_observation,
+            # "get_person_by_id": self.memory_retriever.get_person_by_id,
+            "find_person_by_name": self.memory_retriever.find_person_by_name,
+            # "find_similar_person_relationships": self.memory_retriever.find_similar_person_relationships,
         }
 
     async def test_retrieve(self, user_request: str, max_turns: int = 5):

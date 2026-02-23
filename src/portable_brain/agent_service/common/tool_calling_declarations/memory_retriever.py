@@ -169,6 +169,67 @@ get_top_relevant_memories_declaration = {
 }
 
 # =====================================================================
+# People Embeddings — Interpersonal relationship memory
+# =====================================================================
+
+get_person_by_id_declaration = {
+    "name": "get_person_by_id",
+    "description": "Look up a specific person's interpersonal relationship record by their unique ID. Use this when you already know the person's ID and want their full relationship details.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "person_id": {
+                "type": "string",
+                "description": "The unique identifier of the person record to retrieve.",
+            },
+        },
+        "required": ["person_id"],
+    },
+}
+
+find_person_by_name_declaration = {
+    "name": "find_person_by_name",
+    "description": "Fuzzy name lookup for interpersonal relationship records using trigram similarity. Use this to find a person when you have their name (or a rough approximation of it). Handles typos, nicknames, and partial names — e.g. 'Jon Smith' will match 'John Smith'.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The name (or partial/approximate name) to search for.",
+            },
+            "similarity_threshold": {
+                "type": "number",
+                "description": "Minimum trigram similarity score (0–1) required to include a result. Lower values cast a wider net. Defaults to 0.3.",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of results to return. Defaults to 10.",
+            },
+        },
+        "required": ["name"],
+    },
+}
+
+find_similar_person_relationships_declaration = {
+    "name": "find_similar_person_relationships",
+    "description": "Semantic search over interpersonal relationship descriptions using natural language. Use this when you want to find people whose relationship with the user matches a concept or situation, e.g. 'close friend from work' or 'someone the user messages frequently on Instagram'.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Natural language query to search semantically against stored relationship descriptions.",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Maximum number of results to return. Defaults to 5.",
+            },
+        },
+        "required": ["query"],
+    },
+}
+
+# =====================================================================
 # Text Embeddings — Semantic similarity search
 # =====================================================================
 
@@ -221,6 +282,10 @@ memory_retriever_declarations = [
     get_top_relevant_memories_declaration,
     find_semantically_similar_declaration,
     get_embedding_for_observation_declaration,
+    # people embeddings
+    get_person_by_id_declaration,
+    find_person_by_name_declaration,
+    find_similar_person_relationships_declaration,
 ]
 
 # placeholder for testing: only text log memory
@@ -234,4 +299,7 @@ memory_retriever_declarations_for_testing = [
     # get_top_relevant_memories_declaration,
     find_semantically_similar_declaration,
     # get_embedding_for_observation_declaration,
+    # get_person_by_id_declaration,
+    find_person_by_name_declaration,
+    # find_similar_person_relationships_declaration,
 ]
