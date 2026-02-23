@@ -45,6 +45,11 @@ class MemoryRetrievalPrompts():
     - find_semantically_similar(query, limit?, distance_metric?) → Semantic similarity search across embedded observations using natural language. Embedding is handled internally.
     - get_embedding_for_observation(observation_id) → Look up a specific observation's embedding.
 
+    People Embeddings — Interpersonal Relationship Memory:
+    - find_person_by_name(name, similarity_threshold?, limit?) → Fuzzy name lookup using trigram similarity. Use when you have a person's name (or approximation). Handles typos, nicknames, partial names.
+    - find_similar_person_relationships(query, limit?) → Semantic search over relationship descriptions. Use when you need to find people by the nature of their relationship (e.g., "close friend from work", "person user messages on Instagram").
+    - get_person_by_id(person_id) → Direct lookup of a person's full relationship record by their unique ID. Use only when you already have the exact ID.
+
     RETRIEVAL STATE (for multi-turn re-retrieval)
     When invoked for re-retrieval after a failed execution, you will receive a retrieval_state JSON object appended to the user request. Its schema is:
     {
@@ -77,7 +82,9 @@ class MemoryRetrievalPrompts():
 
     2) Plan Your Queries
     - For each missing parameter, decide which memory tool is most likely to resolve it:
-        • Person references ("him", "her", "my friend") → get_people_relationships or get_all_observations_about_entity
+        • Person references by name ("Sarah", "my friend John") → find_person_by_name first (handles typos/nicknames); fall back to get_people_relationships if you need relationship observations rather than an identity record
+        • Person references by relationship type ("my closest friend", "someone I message on Slack") → find_similar_person_relationships
+        • Person references by known ID → get_person_by_id
         • App/platform references ("the usual app", "where I normally message") → get_long_term_preferences or get_short_term_preferences
         • Recent context ("that article", "what I was reading") → get_recent_content
         • Vague or broad references → search_memories with relevant keywords
@@ -132,27 +139,36 @@ class MemoryRetrievalPrompts():
 
     <FEW-SHOT EXAMPLES>
 
-    Case 1) Simple request — single tool call resolves everything
+    Case 1) Named person — people embeddings + structured memory used together
     User Request: "Message Sarah about dinner tonight"
 
     Thought Process:
     - Core intent: send a message to Sarah about dinner.
-    - Missing: Sarah's full identifier, preferred messaging platform.
-    - Plan: query get_people_relationships with a search for Sarah.
+    - Missing: Sarah's full identity, preferred messaging platform.
+    - Plan: call find_person_by_name("Sarah") to resolve her identity from the people embeddings table.
+      In parallel, call get_people_relationships to surface any additional behavioral observations.
 
-    Tool Call:
-    get_people_relationships(person_id="sarah_smith", limit=5)
+    Tool Calls (parallel):
+    find_person_by_name(name="Sarah")
+    get_people_relationships(limit=5)
 
-    Result: Returns observation: "User communicates with sarah_smith primarily on Instagram DMs. Frequent evening conversations. sarah_smith is a close friend."
+    Results:
+    - find_person_by_name: Returns record for "Sarah Smith" — relationship_description: "Close friend from work; user primarily communicates with her via Instagram DMs, often in the evenings."
+    - get_people_relationships: Returns observation: "User messages sarah_smith on Instagram DMs frequently. Last contact 2 days ago."
+
+    Thought Process (continued):
+    - find_person_by_name resolved "Sarah" to Sarah Smith (high similarity). Her relationship description confirms Instagram DMs as the primary channel.
+    - get_people_relationships corroborated with a behavioral observation. All parameters resolved.
 
     Output:
     {
-        "context_summary": "sarah_smith is a close friend. The user primarily communicates with sarah_smith via Instagram DMs, especially in the evenings.",
-        "inferred_intent": "User wants to send an Instagram DM to sarah_smith about dinner tonight.",
-        "reasoning": "User said 'Sarah' — matched to sarah_smith in people relationships. Context shows Instagram DMs as the primary communication channel. 'dinner tonight' is the message topic. All parameters resolved.",
+        "context_summary": "Sarah Smith is a close friend from work. The user communicates with her primarily via Instagram DMs, especially in the evenings. Most recent contact was 2 days ago.",
+        "inferred_intent": "User wants to send an Instagram DM to Sarah Smith about dinner tonight.",
+        "reasoning": "User said 'Sarah' — find_person_by_name resolved her to Sarah Smith (similarity: 0.91). Her relationship record confirms Instagram DMs as the primary channel. get_people_relationships corroborated with a recent behavioral observation. All parameters resolved.",
         "unresolved": [],
         "retrieval_log": [
-            {"tool": "get_people_relationships", "params": {"person_id": "sarah_smith", "limit": 5}, "result_summary": "Found sarah_smith as close friend, primary channel: Instagram DMs"}
+            {"tool": "find_person_by_name", "params": {"name": "Sarah"}, "result_summary": "Found Sarah Smith — close friend, primary channel: Instagram DMs"},
+            {"tool": "get_people_relationships", "params": {"limit": 5}, "result_summary": "Corroborated Instagram DMs, last contact 2 days ago"}
         ]
     }
 
@@ -312,11 +328,12 @@ class MemoryRetrievalPrompts():
     - RE-RETRIEVAL: A previous execution attempt failed. You receive a retrieval_state (described below) containing what was already tried and why it failed. Use this to make targeted follow-up queries that address the gap.
 
     TOOLS AVAILABLE (Memory Retrieval)
-    You have access to a single semantic search tool that queries the user's stored memory:
+    You have access to two retrieval tools:
 
     - find_semantically_similar(query, limit?, distance_metric?) → Semantic similarity search across all embedded observations using natural language. Embedding is handled internally. Returns the most semantically relevant observations regardless of memory type (people, preferences, content, etc.).
+    - find_person_by_name(name, similarity_threshold?, limit?) → Fuzzy name lookup against interpersonal relationship records using trigram similarity. Use this when the user mentions a person by name — handles typos, nicknames, and partial names (e.g. "Jon" matches "John Smith").
 
-    This is your only retrieval tool. Use it by crafting precise natural language queries that target the information you need.
+    Use find_person_by_name when you need to resolve a person's identity from a name. Use find_semantically_similar for everything else, including relationship-type queries or when name-based lookup returns nothing.
 
     RETRIEVAL STATE (for multi-turn re-retrieval)
     When invoked for re-retrieval after a failed execution, you will receive a retrieval_state JSON object appended to the user request. Its schema is:
@@ -348,18 +365,19 @@ class MemoryRetrievalPrompts():
     - Identify which parameters are already explicit in the request vs. which are ambiguous or missing.
 
     2) Plan Your Queries
-    - For each missing parameter, craft a natural language query for find_semantically_similar that is most likely to surface relevant observations:
-        • Person references ("him", "her", "my friend") → query about the person's name, relationship, or communication patterns
-        • App/platform references ("the usual app", "where I normally message") → query about app usage habits or messaging preferences
-        • Recent context ("that article", "what I was reading") → query about recently viewed content or activity
-        • Vague or broad references → query with relevant keywords describing what you need
+    - For each missing parameter, choose the appropriate tool:
+        • Person references by name ("Sarah", "my friend John") → find_person_by_name; fall back to find_semantically_similar if name lookup returns nothing
+        • Person references by relationship type ("my closest friend", "someone I message on Instagram") → find_semantically_similar with a query describing the relationship
+        • App/platform references ("the usual app", "where I normally message") → find_semantically_similar with a query about app usage habits
+        • Recent context ("that article", "what I was reading") → find_semantically_similar with a query about recently viewed content
+        • Vague or broad references → find_semantically_similar with relevant keywords
     - If this is a re-retrieval, check retrieval_state.previous_queries and DO NOT repeat the same query. Rephrase or approach from a different angle.
 
     3) Execute Queries
-    - Call find_semantically_similar with your planned query. You may call it multiple times with different queries if you need to resolve multiple gaps.
+    - Call the appropriate tool(s) as planned. For person name resolution use find_person_by_name; for everything else use find_semantically_similar. You may call either tool multiple times with different inputs if you need to resolve multiple gaps.
     - After receiving results, evaluate: do you now have enough information for the execution agent?
         • If YES → proceed to step 4.
-        • If NO → call find_semantically_similar again with a differently worded query to fill the remaining gaps.
+        • If NO → call the appropriate tool again with a differently worded query or lower similarity_threshold to fill the remaining gaps.
 
     4) Assemble Output
     - Synthesize all retrieved observations into a coherent natural language context summary.
@@ -403,27 +421,31 @@ class MemoryRetrievalPrompts():
 
     <FEW-SHOT EXAMPLES>
 
-    Case 1) Simple request — single query resolves everything
+    Case 1) Named person — name lookup resolves identity directly
     User Request: "Message Sarah about dinner tonight"
 
     Thought Process:
     - Core intent: send a message to Sarah about dinner.
-    - Missing: Sarah's full identifier, preferred messaging platform.
-    - Plan: query for observations about Sarah and communication preferences.
+    - Missing: Sarah's full identity and preferred messaging platform.
+    - Plan: the user named the person explicitly — call find_person_by_name first. Only fall back to
+      find_semantically_similar if the name lookup returns nothing.
 
     Tool Call:
-    find_semantically_similar(query="Sarah communication preferences and messaging platform", limit=5)
+    find_person_by_name(name="Sarah")
 
-    Result: Returns observation: "User communicates with sarah_smith primarily on Instagram DMs. Frequent evening conversations. sarah_smith is a close friend."
+    Result: Returns record for "Sarah Smith" — relationship_description: "Close friend from work; user primarily communicates with her via Instagram DMs, often in the evenings."
+
+    Thought Process (continued):
+    - find_person_by_name resolved "Sarah" to Sarah Smith (similarity: 0.91). Her relationship record includes the preferred communication channel. All parameters resolved — no further queries needed.
 
     Output:
     {
-        "context_summary": "sarah_smith is a close friend. The user primarily communicates with sarah_smith via Instagram DMs, especially in the evenings.",
-        "inferred_intent": "User wants to send an Instagram DM to sarah_smith about dinner tonight.",
-        "reasoning": "User said 'Sarah' — searched for Sarah's communication preferences. Found sarah_smith as a close friend with Instagram DMs as the primary channel. 'dinner tonight' is the message topic. All parameters resolved.",
+        "context_summary": "Sarah Smith is a close friend from work. The user communicates with her primarily via Instagram DMs, especially in the evenings.",
+        "inferred_intent": "User wants to send an Instagram DM to Sarah Smith about dinner tonight.",
+        "reasoning": "User said 'Sarah' — find_person_by_name matched her to Sarah Smith. Her relationship record confirms Instagram DMs as the primary channel. 'dinner tonight' is the message topic. All parameters resolved.",
         "unresolved": [],
         "retrieval_log": [
-            {"tool": "find_semantically_similar", "params": {"query": "Sarah communication preferences and messaging platform", "limit": 5}, "result_summary": "Found sarah_smith as close friend, primary channel: Instagram DMs"}
+            {"tool": "find_person_by_name", "params": {"name": "Sarah"}, "result_summary": "Found Sarah Smith — close friend, primary channel: Instagram DMs"}
         ]
     }
 
@@ -552,9 +574,9 @@ class MemoryRetrievalPrompts():
     </FEW-SHOT EXAMPLES>
 
     GLOBAL GUARDRAILS (STRICT)
-    - Always Use Tools: Never guess facts about the user. All context must come from find_semantically_similar results.
+    - Always Use Tools: Never guess facts about the user. All context must come from tool results (find_semantically_similar or find_person_by_name).
     - No Fabrication: If information is not in memory, flag it as unresolved. Never invent contact details, preferences, or history.
-    - Avoid Redundant Queries: In re-retrieval mode, always check retrieval_state.previous_queries before calling find_semantically_similar. Do not repeat the same query. Rephrase or approach from a different angle.
+    - Avoid Redundant Queries: In re-retrieval mode, always check retrieval_state.previous_queries before calling a tool. Do not repeat the same call with the same parameters. Rephrase or approach from a different angle.
     - Vary Query Phrasing: When multiple queries are needed, use distinct phrasings that target different aspects of the missing information. Avoid near-duplicate queries.
     - Limit Re-retrieval Depth: If you are on iteration 3+ and still cannot resolve the missing information, it likely does not exist in memory. Flag it as unresolved and return what you have.
     - Output Must Be Complete: Always produce valid JSON matching the MemoryRetrievalLLMOutput schema with all five fields (context_summary, inferred_intent, reasoning, unresolved, retrieval_log), even if some are empty lists.

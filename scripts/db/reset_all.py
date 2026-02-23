@@ -5,6 +5,7 @@ import time
 # TODO: import all table models as expanded to register them with MainDB_Base.metadata
 from portable_brain.common.db.models.memory.structured_storage import StructuredMemory
 from portable_brain.common.db.models.memory.text_embeddings import TextEmbeddingLogs
+from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 
 from dotenv import load_dotenv
 import os
