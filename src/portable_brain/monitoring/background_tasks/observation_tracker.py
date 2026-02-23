@@ -10,10 +10,11 @@ from portable_brain.common.logging.logger import logger
 # Base repository for all observations
 from portable_brain.monitoring.observation_repository import ObservationRepository
 
-# Canonical DTOs for UI state, inferred action, observations
+# Canonical DTOs for UI state, state snapshots, inferred action, observations
 from portable_brain.monitoring.background_tasks.types.ui_states.ui_state import UIState, UIActivity
 from portable_brain.monitoring.background_tasks.types.ui_states.state_changes import UIStateChange, StateChangeSource
 from portable_brain.monitoring.background_tasks.types.ui_states.state_change_types import StateChangeType
+from portable_brain.monitoring.background_tasks.types.ui_states.state_snapshot import UIStateSnapshot
 from portable_brain.monitoring.background_tasks.types.action.action_types import ActionType
 from portable_brain.monitoring.background_tasks.types.action.actions import (
     Action,
@@ -81,9 +82,8 @@ class ObservationTracker(ObservationRepository):
         # NOTE: deprecated, to be removed
         self.inferred_actions: deque[Action] = deque(maxlen=50)
 
-        # track the 50 most recent state snapshots, which is the cleaned up version of UIStateChanges
-        # just a semantic, compressed text description of each state for LLM inference, not a Pydantic wrapper
-        self.state_snapshots: deque[str] = deque(maxlen=50)
+        # track the 50 most recent state snapshots as structured DTOs
+        self.state_snapshots: deque[UIStateSnapshot] = deque(maxlen=50)
 
         # track the 20 most recent high-level observations based on inferred actions
         # NOTE: observations look at prev. records to update
@@ -118,12 +118,17 @@ class ObservationTracker(ObservationRepository):
                     self.recent_state_changes.append(change)
                     logger.info(f"Detected state change: {change.change_type}")
                     
-                    # if APP_SWITCH change, first append the before and after app packages to state snapshots
-                    if change.change_type == StateChangeType.APP_SWITCH:
-                        self.state_snapshots.append(f"APP SWITCH: from {change.before.package} to {change.after.package}")
-
-                    # For both CHANGED and APP_SWITCH, should append the AFTER state's formatted_text field to state snapshots, alongside activity info
-                    self.state_snapshots.append(f"{change.after.formatted_text}\n • **Activity:** {change.after.activity.activity_name}")
+                    # construct a UIStateSnapshot DTO from the detected change
+                    is_app_switch = change.change_type == StateChangeType.APP_SWITCH
+                    snapshot = UIStateSnapshot(
+                        formatted_text=change.after.formatted_text,
+                        activity=change.after.activity,
+                        package=change.after.package,
+                        timestamp=change.timestamp,
+                        is_app_switch=is_app_switch,
+                        app_switch_info=f"APP SWITCH: from {change.before.package} to {change.after.package}" if is_app_switch else None,
+                    )
+                    self.state_snapshots.append(snapshot)
 
                     # no more fragile inference on actions
 
@@ -170,6 +175,7 @@ class ObservationTracker(ObservationRepository):
             return None
         
         recent_snapshots = list(self.state_snapshots)[-context_size:]
+        snapshot_texts = [s.to_inference_text() for s in recent_snapshots]
         last_observation = self.observations[-1] if self.observations else None
 
         # create new observation or update previous
@@ -178,12 +184,12 @@ class ObservationTracker(ObservationRepository):
         if last_observation:
             # if we have a recent observation, either update it or create new
             # compare previous observation in the context of recent snapshots, try to update it
-            updated_observation = await self.inferencer.update_observation(last_observation, recent_snapshots)
+            updated_observation = await self.inferencer.update_observation(last_observation, snapshot_texts)
         if not updated_observation:
             # if we reach here, then either no last observation, or there is nothing meaningful to update
             # -> create new observation; look at recent snapshots and make a meaningful observation
             logger.info(f"No update to make, creating new observation from recent snapshots.")
-            new_observation = await self.inferencer.create_new_observation(recent_snapshots)
+            new_observation = await self.inferencer.create_new_observation(snapshot_texts)
             logger.info(f"Created new observation from recent snapshots: {new_observation.node if new_observation else None}")
             # NOTE: the parent caller will handle saving the cache-evicted observation to db
             return new_observation # may be None, which indicates no new, meaningful observation to make
@@ -222,7 +228,7 @@ class ObservationTracker(ObservationRepository):
     def get_state_snapshots(
         self,
         limit: Optional[int] = None,
-    ) -> List[str]:
+    ) -> List[UIStateSnapshot]:
         """
         Get state snapshots history.
         NOTE: only up to 50 recent snapshots are stored.
@@ -231,8 +237,7 @@ class ObservationTracker(ObservationRepository):
             limit: Max snapshots to return
 
         Returns:
-            List of state snapshot strings.
-            NOTE: the bottom index in returned list is the most recent, so return is reversed.
+            List of UIStateSnapshot DTOs, most recent first.
         """
         snapshots = list(self.state_snapshots)
 
@@ -410,14 +415,15 @@ class ObservationTracker(ObservationRepository):
             return None
 
         recent_snapshots = list(self.state_snapshots)[-context_size:]
+        snapshot_texts = [s.to_inference_text() for s in recent_snapshots]
 
         # unconditional test — use helper to create observation
-        new_observation = await self.inferencer.test_create_new_observation(state_snapshots=recent_snapshots)
+        new_observation = await self.inferencer.test_create_new_observation(state_snapshots=snapshot_texts)
 
         # return new observation (may be None)
         return new_observation
 
-    async def replay_state_snapshots(self, state_snapshots: list[str]):
+    async def replay_state_snapshots(self, state_snapshots: list[UIStateSnapshot]):
         """
         Replays a sequence of state snapshots through the observation pipeline.
         NOTE: allows mocked testing with predefined list of snapshot scenarios.
