@@ -43,8 +43,6 @@ async def replay_scenario(
     """
     Replays a predefined state snapshot scenario through the observation tracker.
     Useful for testing the full memory pipeline without a real device.
-
-    TODO: SNAPSHOT_SCENARIOS fixtures need to be migrated from list[Action] to list[str] (state snapshots).
     """
     snapshots = SNAPSHOT_SCENARIOS[request.scenario_name]()
     logger.info(f"Replaying scenario '{request.scenario_name}' with {len(snapshots)} snapshots")
