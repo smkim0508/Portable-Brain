@@ -48,3 +48,14 @@ class ToolCallRequest(BaseModel):
     Request body for a natural language query to be executed on the device via tool calling.
     """
     user_request: str
+
+class PersonRelationshipRequest(BaseModel):
+    """
+    Request body for saving an interpersonal relationship embedding.
+    """
+    first_name: str
+    last_name: Optional[str] = None
+    id: Optional[str] = None  # defaults to a random UUID if not provided
+    relationship_description: str
+    platform: Optional[str] = None
+    platform_handle: Optional[str] = None

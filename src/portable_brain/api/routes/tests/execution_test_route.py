@@ -58,7 +58,8 @@ async def rag_execution_test(
     main_orchestrator = MainOrchestrator(execution_agent, retrieval_agent)
     result = await main_orchestrator.run(
         user_request=request.user_request,
-        max_iterations=settings.orchestrator_max_iterations,
+        # max_iterations=settings.orchestrator_max_iterations,
+        max_iterations=1,
         execution_agent_max_turns=settings.execution_agent_max_turns,
         retrieval_agent_max_turns=settings.retrieval_agent_max_turns
     )

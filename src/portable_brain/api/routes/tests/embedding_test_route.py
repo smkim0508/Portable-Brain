@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 # response models
 from portable_brain.api.response_models.tests import TestResponse, SimilarEmbeddingResponse
 # request body models
-from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest, SimilarEmbeddingRequest
+from portable_brain.api.request_models.tests import TestRequest, TestEmbeddingRequest, SimilarEmbeddingRequest, PersonRelationshipRequest
 # crud
 from portable_brain.common.db.crud.memory.text_embeddings_crud import find_similar_embeddings
 
@@ -48,6 +48,25 @@ async def test_text_embedding(
     except Exception as e:
         logger.error(f"Error testing text embedding: {e}")
         return {"message": f"Error testing text embedding: {e}"}, 500
+
+@router.post("/save-person-relationship")
+async def save_person_relationship(
+    request: PersonRelationshipRequest,
+    observation_tracker: ObservationTracker = Depends(get_observation_tracker),
+):
+    try:
+        await observation_tracker.embedding_generator.generate_and_save_person_embedding(
+            first_name=request.first_name,
+            last_name=request.last_name,
+            person_id=request.id,
+            relationship_description=request.relationship_description,
+            platform=request.platform,
+            platform_handle=request.platform_handle,
+        )
+        return {"message": "successfully saved person relationship embedding!"}
+    except Exception as e:
+        logger.error(f"Error saving person relationship: {e}")
+        raise HTTPException(status_code=500, detail=f"Error saving person relationship: {e}")
 
 @router.post("/find-similar-embedding", response_model=SimilarEmbeddingResponse)
 async def find_similar_embedding(
