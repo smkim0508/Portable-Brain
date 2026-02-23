@@ -189,7 +189,7 @@ get_person_by_id_declaration = {
 
 find_person_by_name_declaration = {
     "name": "find_person_by_name",
-    "description": "Fuzzy name lookup for interpersonal relationship records using trigram similarity. Use this to find a person when you have their name (or a rough approximation of it). Handles typos, nicknames, and partial names — e.g. 'Jon Smith' will match 'John Smith'.",
+    "description": "Fuzzy name lookup for interpersonal relationship records using trigram similarity. Use this to find a person when you have their name (or a rough approximation of it). Handles typos, nicknames, and partial names — e.g. 'Jon Smith' will match 'John Smith'. Returns a list of dicts with keys: full_name, relationship_description, similarity_score.",
     "parameters": {
         "type": "object",
         "properties": {
@@ -235,7 +235,7 @@ find_similar_person_relationships_declaration = {
 
 find_semantically_similar_declaration = {
     "name": "find_semantically_similar",
-    "description": "Semantic similarity search across all embedded observations using natural language. Use this when full-text search is insufficient and you need meaning-based retrieval. Embedding is handled internally.",
+    "description": "Semantic similarity search across all embedded observations using natural language. Use this when full-text search is insufficient and you need meaning-based retrieval. Embedding is handled internally. Returns a list of observation text strings ordered by semantic similarity.",
     "parameters": {
         "type": "object",
         "properties": {

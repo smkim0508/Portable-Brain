@@ -175,10 +175,11 @@ class MemoryRetriever():
         name: str,
         similarity_threshold: float = 0.3,
         limit: int = 10,
-    ) -> list[tuple[InterpersonalRelationship, float]]:
+    ) -> list[dict]:
         """
         Fuzzy name lookup using trigram similarity. Handles typos, nicknames, and
-        partial names. Returns (record, similarity_score) tuples ordered by best match.
+        partial names. Returns dicts with full_name, relationship_description, and
+        similarity_score, ordered by best match.
         """
         return await find_person_by_name(
             name=name,
@@ -212,15 +213,16 @@ class MemoryRetriever():
         query: str,
         limit: int = 5,
         distance_metric: str = "cosine",
-    ) -> list[tuple[TextEmbeddingLogs, float]]:
-        """Semantic search across all embedded observations using natural language. Embeds the query internally."""
+    ) -> list[str]:
+        """Semantic search across all embedded observations using natural language. Embeds the query internally. Returns a list of observation text strings ordered by similarity."""
         query_vectors = await self.text_embedding_client.aembed_text(text=[query])
-        return await find_similar_embeddings(
+        results = await find_similar_embeddings(
             query_vector=query_vectors[0],
             limit=limit,
             main_db_engine=self.main_db_engine,
             distance_metric=distance_metric,
         )
+        return [record.observation_text for record, _ in results]
 
     async def get_embedding_for_observation(
         self,

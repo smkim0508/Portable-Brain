@@ -91,7 +91,7 @@ async def find_person_by_name(
     main_db_engine: AsyncEngine,
     similarity_threshold: float = 0.3,
     limit: int = 10,
-) -> list[tuple[InterpersonalRelationship, float]]:
+) -> list[dict]:
     """
     Fuzzy name lookup using PostgreSQL trigram similarity (pg_trgm).
     Results are ordered by descending similarity score.
@@ -103,7 +103,7 @@ async def find_person_by_name(
         limit: Maximum number of results to return
 
     Returns:
-        List of tuples (InterpersonalRelationship, similarity_score)
+        List of dicts with keys: full_name, relationship_description, similarity_score
     """
     session_maker = get_async_session_maker(main_db_engine)
     similarity = func.similarity(InterpersonalRelationship.full_name, name)
@@ -112,7 +112,8 @@ async def find_person_by_name(
         async with session_maker() as session:
             stmt = (
                 select(
-                    InterpersonalRelationship,
+                    InterpersonalRelationship.full_name,
+                    InterpersonalRelationship.relationship_description,
                     similarity.label("similarity_score"),
                 )
                 .filter(similarity > similarity_threshold)
@@ -122,7 +123,14 @@ async def find_person_by_name(
             result = await session.execute(stmt)
             rows = result.all()
             logger.info(f"Found {len(rows)} people matching name '{name}'")
-            return [(row[0], row[1]) for row in rows]
+            return [
+                {
+                    "full_name": row[0],
+                    "relationship_description": row[1],
+                    "similarity_score": row[2],
+                }
+                for row in rows
+            ]
     except Exception as e:
         logger.error(f"Failed to find person by name '{name}': {e}")
         raise

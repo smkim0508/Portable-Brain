@@ -96,6 +96,8 @@ class MemoryRetrievalPrompts():
     - After receiving results, evaluate: do you now have enough information for the execution agent?
         • If YES → proceed to step 4.
         • If NO → call additional tools to fill the remaining gaps. Prefer targeted follow-ups over broad re-scans.
+    - Filter semantic results: find_semantically_similar and search_memories return results ranked by similarity score, but not every returned observation is actually relevant to the request. After receiving results, read each one and discard any that do not directly address the missing parameter. Only carry forward observations that are concretely useful — ignore the rest entirely, even if they were returned with a high score.
+    - Confirm person identity via description: When find_person_by_name returns matches, the similarity_score only reflects name-string similarity — it does NOT mean the person is contextually correct. Always read each result's relationship_description to verify the person fits the context of the request (e.g., right platform, right relationship type). If a high-scoring name match has a description that does not fit the request, treat it as a non-match and continue searching or flag as unresolved.
 
     4) Assemble Output
     - Synthesize all retrieved observations into a coherent natural language context summary.
@@ -302,6 +304,8 @@ class MemoryRetrievalPrompts():
     - No Fabrication: If information is not in memory, flag it as unresolved. Never invent contact details, preferences, or history.
     - Avoid Redundant Queries: In re-retrieval mode, always check retrieval_state.previous_queries before calling a tool. Do not repeat the exact same call with the same parameters.
     - Prioritize Specificity: Start with type-specific tools (get_people_relationships, get_long_term_preferences, etc.) before falling back to cross-type search or semantic search.
+    - Filter Semantic Results: Semantic similarity search returns results ranked by embedding distance, not by actual usefulness to the request. Always read each returned observation and discard anything that is not directly relevant. Never include irrelevant observations in context_summary just because they were returned.
+    - Validate Person Matches by Description: similarity_score from find_person_by_name only measures name-string similarity. Always check relationship_description to confirm the person is a contextual match for the request. A high score on the wrong person is still the wrong person.
     - Limit Re-retrieval Depth: If you are on iteration 3+ and still cannot resolve the missing information, it likely does not exist in memory. Flag it as unresolved and return what you have.
     - Output Must Be Complete: Always produce valid JSON matching the MemoryRetrievalLLMOutput schema with all five fields (context_summary, inferred_intent, reasoning, unresolved, retrieval_log), even if some are empty lists.
 
@@ -378,6 +382,8 @@ class MemoryRetrievalPrompts():
     - After receiving results, evaluate: do you now have enough information for the execution agent?
         • If YES → proceed to step 4.
         • If NO → call the appropriate tool again with a differently worded query or lower similarity_threshold to fill the remaining gaps.
+    - Filter semantic results: find_semantically_similar returns results ranked by embedding similarity, but not every result is actually relevant to the request. After receiving results, read each observation and discard any that do not directly address the missing parameter. Only carry forward observations that are concretely useful — ignore the rest, even if they had a high similarity score.
+    - Confirm person identity via description: When find_person_by_name returns matches, the similarity_score only reflects name-string similarity — it does NOT mean the person is contextually correct. Always read each result's relationship_description to verify the person fits the context of the request (e.g., right platform, right relationship type). If a high-scoring name match has a description that does not fit, treat it as a non-match and continue searching or flag as unresolved.
 
     4) Assemble Output
     - Synthesize all retrieved observations into a coherent natural language context summary.
@@ -578,6 +584,8 @@ class MemoryRetrievalPrompts():
     - No Fabrication: If information is not in memory, flag it as unresolved. Never invent contact details, preferences, or history.
     - Avoid Redundant Queries: In re-retrieval mode, always check retrieval_state.previous_queries before calling a tool. Do not repeat the same call with the same parameters. Rephrase or approach from a different angle.
     - Vary Query Phrasing: When multiple queries are needed, use distinct phrasings that target different aspects of the missing information. Avoid near-duplicate queries.
+    - Filter Semantic Results: find_semantically_similar returns results ranked by embedding distance, not by actual usefulness. Always read each returned observation and discard anything not directly relevant to the request. Never include irrelevant observations in context_summary just because they were returned.
+    - Validate Person Matches by Description: similarity_score from find_person_by_name only measures name-string similarity. Always check relationship_description to confirm the person is a contextual match. A high score on the wrong person is still the wrong person.
     - Limit Re-retrieval Depth: If you are on iteration 3+ and still cannot resolve the missing information, it likely does not exist in memory. Flag it as unresolved and return what you have.
     - Output Must Be Complete: Always produce valid JSON matching the MemoryRetrievalLLMOutput schema with all five fields (context_summary, inferred_intent, reasoning, unresolved, retrieval_log), even if some are empty lists.
 
