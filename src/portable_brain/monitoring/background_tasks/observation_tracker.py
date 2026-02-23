@@ -513,40 +513,18 @@ class ObservationTracker(ObservationRepository):
     
     async def create_test_observation(self, context_size: int = 10) -> Optional[Observation]:
         """
-        Creates a TEST observation object based on the current history of actions.
+        Creates a TEST observation object based on the current history of state snapshots.
         Verifies LLM / RAG functionality.
         """
-        # TODO: use the history of inferred actions to build more observations
-        # for now, just build a single observation to test
-
-        # if no inferred actions, return; there are no observations to make
         if not self.state_snapshots:
             logger.info("no state snapshots to create observation from")
             return None
-        
+
         recent_snapshots = list(self.state_snapshots)[-context_size:]
-        last_observation = self.observations[-1] if self.observations else None
 
-        # NOTE: test this after verifying creation works
-        # create new observation or update previous
-        new_observation: Observation | None = None
-        if last_observation:
-            # if we have a recent observation, either update it or create new
-            # compare previous observation in the context of recent actions
-            
-            # logic for looking at recent actions and making a meaningful observation
-            pass
-        else:
-            # otherwise, create a new observation unconditionally
-            pass
+        # unconditional test — use helper to create observation
+        new_observation = await self.inferencer.test_create_new_observation(state_snapshots=recent_snapshots)
 
-        # for now, unconditional test
-        # use helper to create observation
-        new_observation = await self.inferencer.test_create_new_observation(actions=recent_snapshots)
-
-        # TODO: load in llm client and use semantic parsing
-        # short -> long term storage is only relevant for preferences
-            
         # return new observation (may be None)
         return new_observation
 
@@ -554,6 +532,8 @@ class ObservationTracker(ObservationRepository):
         """
         Replays a sequence of actions.
         NOTE: allows mocked testing with predefined list of action scenarios.
+
+        TODO: should update to use replayable state snapshot sequences instead.
         """
         # pause tracking before replay to ensure no overrides and unexpected behavior
         previous_running = await self.pause_tracking()
