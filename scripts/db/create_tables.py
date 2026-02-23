@@ -5,6 +5,7 @@ import time
 # TODO: import all table models as expanded to register them with MainDB_Base.metadata
 from portable_brain.common.db.models.memory.structured_storage import StructuredMemory
 from portable_brain.common.db.models.memory.text_embeddings import TextEmbeddingLogs
+from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 
 from dotenv import load_dotenv
 import os
@@ -22,6 +23,7 @@ def create_all_tables(engine):
 
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
         conn.commit()
 
     MainDB_Base.metadata.create_all(engine, checkfirst=True)

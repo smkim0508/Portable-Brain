@@ -4,6 +4,8 @@ from sqlalchemy.orm import sessionmaker
 import time
 # TODO: import tables
 from portable_brain.common.db.models.memory.structured_storage import StructuredMemory
+from portable_brain.common.db.models.memory.text_embeddings import TextEmbeddingLogs
+from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 
 from dotenv import load_dotenv
 import os
