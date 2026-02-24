@@ -109,7 +109,7 @@ def clear_state_snapshots(
         logger.error(f"Error clearing state snapshots history: {e}")
         return {"message": f"Error clearing state snapshots history: {e}"}, 500
     
-@router.get("get-state-snapshots")
+@router.get("/get-state-snapshots")
 def retrieve_state_snapshots(
     limit: Optional[int] = Query(default=None, ge=1, le=10),
     observation_tracker: ObservationTracker = Depends(get_observation_tracker),
