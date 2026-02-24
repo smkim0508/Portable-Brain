@@ -47,7 +47,8 @@ class DeviceExecutionPrompts():
     2) Construct the Enriched Command
     - Be specific: "Open Instagram, navigate to DMs, and send a message to @sarah_smith saying 'Are you free for dinner tonight?'"
     - Include all necessary navigation: app to open, screens to navigate, fields to fill.
-    - For messaging: always include the platform, recipient identifier, and message content. If the user provides exact words to send, use them verbatim. If the user gives a topic or intent without exact words (e.g., "tell Sarah I'll be late for dinner", "text him to ball tomorrow"), compose a natural, conversational message that expresses that intent — for example: "Hey, just wanted to let you know I'm running a bit late for dinner!" Do not reduce a topic description to a bare fragment. Write a message the user would actually send.
+    - For messaging: always include the platform, recipient identifier, and message content. If the user provides exact words to send, use them verbatim. If the user gives a topic or intent without exact words (e.g., "tell Sarah I'll be late for dinner", "text him to ball tomorrow"), compose a natural, conversational message that expresses that intent — for example: "Hey, just wanted to let you know I'm running a bit late for dinner!" Do not reduce a topic description to a bare fragment. Write a message the user would actually send. Always end the command with an explicit step to tap the Send button to confirm — e.g., "then tap the Send button to confirm."
+    - For sharing content (e.g., sharing a post, reel, article, or link to a specific person or group): always use the platform's native share button — do NOT copy the link and paste it into a chat, as pasting is unreliable. Instead, tap the share icon on the content, then use the search or recipient field within the share UI to find and select the target directly, then confirm by tapping the Send or Share button. Example: "Tap the Share button on the post, search for [recipient] in the share sheet, select them, and tap Send to confirm."
     - For app interactions: include the specific app package or name and the action to perform.
     - If any required detail is missing or ambiguous, do not execute — report it as a failure.
 
@@ -103,12 +104,12 @@ class DeviceExecutionPrompts():
     Case 2) Messaging with full details provided
     User Request: "Send a WhatsApp message to Kevin Chen saying I'll be 10 minutes late"
 
-    Thought Process: All details are explicit — platform (WhatsApp), recipient (Kevin Chen), message content (I'll be 10 minutes late). No ambiguity. Single coherent messaging action.
+    Thought Process: All details are explicit — platform (WhatsApp), recipient (Kevin Chen), message content (I'll be 10 minutes late). No ambiguity. Single coherent messaging action. Must end with explicit send confirmation.
 
     Tool Call:
-    execute_command(enriched_command="Open WhatsApp, find the chat with Kevin Chen, and send the message: I'll be 10 minutes late", reasoning=false)
+    execute_command(enriched_command="Open WhatsApp, find the chat with Kevin Chen, type the message: I'll be 10 minutes late, then tap the Send button to confirm.", reasoning=false)
 
-    Tool Result: {"success": true, "reason": "Message sent to Kevin Chen on WhatsApp.", "steps": 4, "command": "Open WhatsApp, find the chat with Kevin Chen, and send the message: I'll be 10 minutes late"}
+    Tool Result: {"success": true, "reason": "Message sent to Kevin Chen on WhatsApp.", "steps": 4, "command": "Open WhatsApp, find the chat with Kevin Chen, type the message: I'll be 10 minutes late, then tap the Send button to confirm."}
 
     Output:
     {"success": true, "result_summary": "Sent WhatsApp message to Kevin Chen: I'll be 10 minutes late.", "failure_reason": null, "missing_information": null}
@@ -118,12 +119,12 @@ class DeviceExecutionPrompts():
     Case 3) Messaging with topic but no exact words
     User Request: "Text Sarah that I'll be a bit late for dinner"
 
-    Thought Process: Platform (text/SMS) and recipient (Sarah) are explicit. The message topic is clear — I'll be late for dinner — but the user didn't give exact words to send. I should compose a natural, conversational message that expresses this intent. Sending the bare topic "I'll be a bit late for dinner" is acceptable but a slightly warmer phrasing reads more naturally.
+    Thought Process: Platform (text/SMS) and recipient (Sarah) are explicit. The message topic is clear — I'll be late for dinner — but the user didn't give exact words to send. I should compose a natural, conversational message that expresses this intent. Must end with explicit send confirmation.
 
     Tool Call:
-    execute_command(enriched_command="Open the Messages app, find Sarah's conversation, and send the message: Hey, just a heads up — running a bit late for dinner tonight!", reasoning=false)
+    execute_command(enriched_command="Open the Messages app, find Sarah's conversation, type the message: Hey, just a heads up — running a bit late for dinner tonight!, then tap the Send button to confirm.", reasoning=false)
 
-    Tool Result: {"success": true, "reason": "Message sent to Sarah.", "steps": 3, "command": "Open the Messages app, find Sarah's conversation, and send the message: Hey, just a heads up — running a bit late for dinner tonight!"}
+    Tool Result: {"success": true, "reason": "Message sent to Sarah.", "steps": 3, "command": "Open the Messages app, find Sarah's conversation, type the message: Hey, just a heads up — running a bit late for dinner tonight!, then tap the Send button to confirm."}
 
     Output:
     {"success": true, "result_summary": "Sent Sarah a text letting her know you'll be a bit late for dinner.", "failure_reason": null, "missing_information": null}
@@ -133,12 +134,12 @@ class DeviceExecutionPrompts():
     Case 4) Multi-step workflow requiring reasoning
     User Request: "Find the last photo I took and share it with the family group chat on WhatsApp"
 
-    Thought Process: Multi-step command: (1) open gallery/photos, (2) find most recent photo, (3) share it, (4) select WhatsApp, (5) find family group chat, (6) send. This requires navigation across apps and multiple screens. reasoning=true and increased timeout.
+    Thought Process: Multi-step command: (1) open gallery/photos, (2) find most recent photo, (3) tap share, (4) select WhatsApp, (5) find family group chat, (6) send. This requires navigation across apps and multiple screens. reasoning=true and increased timeout. Must include explicit send confirmation at the end.
 
     Tool Call:
-    execute_command(enriched_command="Open the Photos or Gallery app, select the most recent photo taken, tap the share button, choose WhatsApp from the share menu, find the family group chat, and send the photo", reasoning=true, timeout=180)
+    execute_command(enriched_command="Open the Photos or Gallery app, select the most recent photo taken, tap the Share button, choose WhatsApp from the share menu, search for the family group chat in the recipient field, select it, and tap Send to confirm.", reasoning=true, timeout=180)
 
-    Tool Result: {"success": true, "reason": "Photo shared to family group chat on WhatsApp.", "steps": 8, "command": "Open the Photos or Gallery app, select the most recent photo taken, tap the share button, choose WhatsApp from the share menu, find the family group chat, and send the photo"}
+    Tool Result: {"success": true, "reason": "Photo shared to family group chat on WhatsApp.", "steps": 8, "command": "Open the Photos or Gallery app, select the most recent photo taken, tap the Share button, choose WhatsApp from the share menu, search for the family group chat in the recipient field, select it, and tap Send to confirm."}
 
     Output:
     {"success": true, "result_summary": "Shared the most recent photo to the family group chat on WhatsApp.", "failure_reason": null, "missing_information": null}
@@ -214,9 +215,10 @@ class DeviceExecutionPrompts():
     - If context does not resolve an ambiguity, state what information is missing in your response rather than guessing.
 
     3) Construct the Enriched Command
-    - Be specific: "Open Instagram, navigate to DMs, and send a message to @sarah_smith saying 'Are you free for dinner tonight?'"
+    - Be specific: "Open Instagram, navigate to DMs, find the conversation with @sarah_smith, type the message: 'Are you free for dinner tonight?', then tap the Send button to confirm."
     - Include all necessary navigation: app to open, screens to navigate, fields to fill.
-    - For messaging: always include the platform, recipient identifier, and message content. If the user provides exact words to send, use them verbatim. If the user gives a topic or intent without exact words (e.g., "tell Sarah about the meetup", "text him to ball tomorrow"), compose a natural, conversational message that expresses that intent — for example: "Hey, are we still on for the meetup tomorrow?" or "Hey, we still balling tomorrow?". Do not reduce a topic description to a bare fragment. Write a message the user would actually send.
+    - For messaging: always include the platform, recipient identifier, and message content. If the user provides exact words to send, use them verbatim. If the user gives a topic or intent without exact words (e.g., "tell Sarah about the meetup", "text him to ball tomorrow"), compose a natural, conversational message that expresses that intent — for example: "Hey, are we still on for the meetup tomorrow?" or "Hey, we still balling tomorrow?". Do not reduce a topic description to a bare fragment. Write a message the user would actually send. Always end with an explicit step to tap the Send button to confirm — e.g., "then tap the Send button to confirm."
+    - For sharing content (e.g., sharing a post, reel, article, or link to a specific person or group): always use the platform's native share button — do NOT copy the link and paste it into a chat, as pasting is unreliable. Instead, tap the share icon on the content, then use the search or recipient field within the share UI to find and select the target directly, then confirm by tapping the Send or Share button. Example: "Tap the Share button on the post, search for [recipient] in the share sheet, select them, and tap Send to confirm."
     - For app interactions: include the specific app package or name and the action to perform.
 
     4) Set Tool Parameters
@@ -309,9 +311,9 @@ class DeviceExecutionPrompts():
     Thought Process: Multi-step command: (1) open gallery/photos, (2) find most recent photo, (3) share it, (4) select WhatsApp, (5) find family group chat, (6) send. This requires navigation across apps and multiple screens. reasoning=true and increased timeout.
 
     Tool Call:
-    execute_command(enriched_command="Open the Photos or Gallery app, select the most recent photo taken, tap the share button, choose WhatsApp from the share menu, find the family group chat, and send the photo", reasoning=true, timeout=180)
+    execute_command(enriched_command="Open the Photos or Gallery app, select the most recent photo taken, tap the Share button, choose WhatsApp from the share menu, search for the family group chat in the recipient field, select it, and tap Send to confirm.", reasoning=true, timeout=180)
 
-    Tool Result: {"success": true, "reason": "Photo shared to family group chat on WhatsApp.", "steps": 8, "command": "Open the Photos or Gallery app, select the most recent photo taken, tap the share button, choose WhatsApp from the share menu, find the family group chat, and send the photo"}
+    Tool Result: {"success": true, "reason": "Photo shared to family group chat on WhatsApp.", "steps": 8, "command": "Open the Photos or Gallery app, select the most recent photo taken, tap the Share button, choose WhatsApp from the share menu, search for the family group chat in the recipient field, select it, and tap Send to confirm."}
 
     Output:
     {"success": true, "result_summary": "Shared the most recent photo to the family group chat on WhatsApp.", "failure_reason": null, "missing_information": null}
