@@ -531,14 +531,13 @@ class DroidRunClient:
 
         state_id = str(uuid.uuid4())
 
-        # parse focused_element safely - handle non-numeric values
+        # parse focused_element safely - preserve string values that can't be cast to int
         focused_element = None
         if raw_focused_element:
             try:
                 focused_element = int(raw_focused_element)
             except (ValueError, TypeError):
-                # if focused_element is non-numeric (e.g., "YouTube"), set to None
-                focused_element = None
+                focused_element = str(raw_focused_element)
 
         current_state = UIState(
             state_id=state_id,
@@ -549,6 +548,8 @@ class DroidRunClient:
             formatted_text=denoise_formatted_text(formatted_text),
             raw_tree=raw_tree,
         )
+
+        # logger.info(f"UI state captured - focused_element: {current_state.focused_element!r} (raw: {raw_focused_element!r}, activity: {current_state.activity!r}, package: {current_state.package!r})")
 
         return current_state
 

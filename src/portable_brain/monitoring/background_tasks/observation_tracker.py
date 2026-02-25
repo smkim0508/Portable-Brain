@@ -117,13 +117,22 @@ class ObservationTracker(ObservationRepository):
 
                     # determine whether to record this snapshot:
                     # - app switches and activity changes always record immediately
-                    # - same-activity content changes are throttled to content_throttle_interval seconds
+                    # - tapping a UI element (focused_element is int) always records immediately
+                    # - transitioning into typing (focused_element changes from non-str to str) records once
+                    # - continuing to type (focused_element str -> str) is treated as passive and throttled
+                    # - same-activity passive content changes (e.g. scrolling) are throttled to content_throttle_interval
                     # - identical content is always skipped
-                    last_snapshot = self.state_snapshots[-1] if self.state_snapshots else None
-                    is_activity_change = last_snapshot is None or snapshot.activity != last_snapshot.activity
-                    content_changed = last_snapshot is None or snapshot.formatted_text != last_snapshot.formatted_text
+                    last_snapshot: Optional[UIStateSnapshot] = self.state_snapshots[-1] if self.state_snapshots else None
+                    is_activity_change: bool = last_snapshot is None or snapshot.activity != last_snapshot.activity
+                    content_changed: bool = last_snapshot is None or snapshot.formatted_text != last_snapshot.formatted_text
+                    # NOTE: takes advantage of focused_element being an int on taps and str when there's a text typed
+                    is_button_tap: bool = isinstance(change.after.focused_element, int)
+                    is_typing_start: bool = not isinstance(change.before.focused_element, str) and isinstance(change.after.focused_element, str)
+                    is_intentional_interaction: bool = is_button_tap or is_typing_start
 
-                    if not is_app_switch and not is_activity_change and last_snapshot: # NOTE: last_snapshot is always logically True when is_activity_change is False
+                    # logger.warning(f"focused before={change.before.focused_element!r} after={change.after.focused_element!r} | is_button_tap={is_button_tap}, is_typing_start={is_typing_start}, is_activity_change={is_activity_change}")
+
+                    if not is_app_switch and not is_activity_change and not is_intentional_interaction and last_snapshot: # NOTE: last_snapshot is always logically True when is_activity_change is False
                         # same activity: skip if content is identical
                         if not content_changed:
                             logger.info("Skipping duplicate snapshot (formatted_text unchanged)")
@@ -135,7 +144,8 @@ class ObservationTracker(ObservationRepository):
                             logger.info(f"Throttling content-only change ({seconds_since_last:.1f}s since last snapshot, threshold: {self.content_throttle_interval}s)")
                             await asyncio.sleep(poll_interval)
                             continue
-
+                    
+                    logger.info(f"Recording new snapshot from activity: {snapshot.activity.activity_name}, package: {snapshot.package}")
                     self.state_snapshots.append(snapshot)
                     self.snapshot_counter += 1
                     # penultimate step, create observation node every context_size snapshots

@@ -23,7 +23,7 @@ class UIState(BaseModel):
     package: str # which app am I on?
     activity: UIActivity # which screen within the app am I on?
     ui_elements: list # TODO: list of ?
-    focused_element: Optional[int] = None # the currently selected element, by idx
+    focused_element: Optional[int | str] = None # the currently selected element, by idx (int) or label (str)
     formatted_text: str # a human-readable description of the UI state NOTE: used by observation inferencer
     raw_tree: Optional[dict] = None # NOTE: need a way to reliably fetch app-specific metadata like username
     raw_tree_hash: Optional[str] = None # optionally, to keep track of any additional info
