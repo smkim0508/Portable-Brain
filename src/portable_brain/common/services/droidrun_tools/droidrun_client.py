@@ -577,7 +577,8 @@ class DroidRunClient:
         if (
             before_pkg == after_pkg and \
             before.activity == after.activity and \
-            before.focused_element == after.focused_element
+            before.focused_element == after.focused_element and \
+            before.formatted_text == after.formatted_text
         ):
             return StateChangeType.NO_CHANGE
 

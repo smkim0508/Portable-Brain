@@ -102,7 +102,7 @@ class ObservationTracker(ObservationRepository):
                     # NOTE: automatically maintained via deque
                     self.recent_state_changes.append(change)
                     logger.info(f"Detected state change: {change.change_type}")
-                    
+
                     # construct a UIStateSnapshot DTO from the detected change
                     is_app_switch = change.change_type == StateChangeType.APP_SWITCH
                     snapshot = UIStateSnapshot(
@@ -113,10 +113,18 @@ class ObservationTracker(ObservationRepository):
                         is_app_switch=is_app_switch,
                         app_switch_info=f"APP SWITCH: from {change.before.package} to {change.after.package}" if is_app_switch else None,
                     )
+
+                    # debounce: skip snapshot if content is identical to last recorded snapshot
+                    # app switches always bypass debounce since they mark a clear navigation event
+                    last_snapshot = self.state_snapshots[-1] if self.state_snapshots else None
+                    content_changed = last_snapshot is None or snapshot.formatted_text != last_snapshot.formatted_text
+                    if not is_app_switch and not content_changed:
+                        # NOTE: the full state changes history tracks everything, even if snapshot is skipped
+                        logger.info("Skipping duplicate snapshot (formatted_text unchanged)")
+                        await asyncio.sleep(poll_interval)
+                        continue
+
                     self.state_snapshots.append(snapshot)
-
-                    # no more fragile inference on actions
-
                     self.snapshot_counter += 1
                     # penultimate step, create observation node every context_size snapshots
                     if self.snapshot_counter >= self.snapshot_context_size:
