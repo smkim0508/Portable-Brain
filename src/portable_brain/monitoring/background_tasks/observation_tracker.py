@@ -158,20 +158,24 @@ class ObservationTracker(ObservationRepository):
                         self.app_snapshot_counters[pkg] = 0
                     self.app_snapshots[pkg].append(snapshot)
                     self.app_snapshot_counters[pkg] += 1
-                    # penultimate step, create observation node every context_size snapshots
+                    # global trigger: create observation every context_size snapshots across all apps
                     if self.snapshot_counter >= self.snapshot_context_size:
                         new_observation = await self._create_or_update_observation(state_snapshots=self.state_snapshots, context_size=self.snapshot_context_size)
                         if new_observation:
-                            # save observation to memory db and local history
-                            # TODO: this helper should evict the old observation, save that to db, and add new observation to local history
                             await self._save_observation(new_observation)
-
                             # TODO: final step, should be handled by memory handler in future
                             # NOTE: this step is to ensure new observations are processed in memory to do temporal update / rearranging
                             # await self.memory_handler.process_observation(observation)
-
-                        # reset counter
                         self.snapshot_counter = 0
+                    # per-app trigger: create observation every context_size snapshots for this specific app
+                    if self.app_snapshot_counters[pkg] >= self.snapshot_context_size:
+                        new_app_observation = await self._create_or_update_observation(state_snapshots=self.app_snapshots[pkg], pkg=pkg, context_size=self.snapshot_context_size)
+                        if new_app_observation:
+                            await self._save_observation(new_app_observation)
+                            # TODO: final step, should be handled by memory handler in future
+                            # NOTE: this step is to ensure new observations are processed in memory to do temporal update / rearranging
+                            # await self.memory_handler.process_observation(observation)
+                        self.app_snapshot_counters[pkg] = 0
 
                     # shorter cooldown if state change HAS been found -> likely another state change might pursue
                     await asyncio.sleep(0.2)
