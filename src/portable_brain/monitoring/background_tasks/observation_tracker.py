@@ -160,7 +160,7 @@ class ObservationTracker(ObservationRepository):
                     self.app_snapshot_counters[pkg] += 1
                     # penultimate step, create observation node every context_size snapshots
                     if self.snapshot_counter >= self.snapshot_context_size:
-                        new_observation = await self._create_or_update_observation(context_size=self.snapshot_context_size)
+                        new_observation = await self._create_or_update_observation(state_snapshots=self.state_snapshots, context_size=self.snapshot_context_size)
                         if new_observation:
                             # save observation to memory db and local history
                             # TODO: this helper should evict the old observation, save that to db, and add new observation to local history
@@ -182,7 +182,7 @@ class ObservationTracker(ObservationRepository):
                 print(f"Observation tracking error: {e}")
                 await asyncio.sleep(5) # Back off on error
 
-    async def _create_or_update_observation(self, context_size: int = 10) -> Optional[Observation]:
+    async def _create_or_update_observation(self, state_snapshots: Optional[deque[UIStateSnapshot]], pkg: Optional[str] = None, context_size: int = 10) -> Optional[Observation]:
         """
         Creates a final observation object based on the current history of state snapshots.
             - An observation object will be one of the possible memory nodes.
@@ -198,11 +198,11 @@ class ObservationTracker(ObservationRepository):
         NOTE: if a previous observation should be updated, handles local history and returns None
         """
         # if no state snapshots, return; there are no observations to make or update
-        if not self.state_snapshots:
-            logger.info("no state snapshots to create observation from")
+        if not state_snapshots:
+            logger.info(f"no state snapshots to create observation from, requested pkg: {pkg if pkg else 'unknown'}")
             return None
         
-        recent_snapshots = list(self.state_snapshots)[-context_size:]
+        recent_snapshots = list(state_snapshots)[-context_size:]
         snapshot_texts = [s.to_inference_text() for s in recent_snapshots]
         last_observation = self.observations[-1] if self.observations else None
 
@@ -432,7 +432,7 @@ class ObservationTracker(ObservationRepository):
 
         # First create an observation with the last remaining state snapshots
         # use snapshot_counter (not snapshot_context_size) to avoid overlapping already-processed snapshots
-        new_observation = await self._create_or_update_observation(context_size=self.snapshot_counter) if self.snapshot_counter > 0 else None
+        new_observation = await self._create_or_update_observation(state_snapshots=self.state_snapshots, context_size=self.snapshot_counter) if self.snapshot_counter > 0 else None
         if new_observation:
             await self._save_observation(new_observation)
         # Then flush the remaining observation
@@ -491,14 +491,14 @@ class ObservationTracker(ObservationRepository):
             self.app_snapshots[pkg].append(snapshot)
             self.app_snapshot_counters[pkg] += 1
             if self.snapshot_counter >= self.snapshot_context_size:
-                new_observation = await self._create_or_update_observation(context_size=self.snapshot_context_size)
+                new_observation = await self._create_or_update_observation(state_snapshots=self.state_snapshots, context_size=self.snapshot_context_size)
                 if new_observation:
                     await self._save_observation(new_observation)
                 self.snapshot_counter = 0
 
         # make final observation for any leftover snapshots not yet processed
         # use snapshot_counter (not snapshot_context_size) to avoid overlapping already-processed snapshots
-        new_observation = await self._create_or_update_observation(context_size=self.snapshot_counter) if self.snapshot_counter > 0 else None
+        new_observation = await self._create_or_update_observation(state_snapshots=self.state_snapshots, context_size=self.snapshot_counter) if self.snapshot_counter > 0 else None
         if new_observation:
             await self._save_observation(new_observation)
 
