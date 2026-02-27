@@ -1,5 +1,7 @@
 # test route to retrieve relevant memory context from RetrievalAgent
+# also tests latency with retrieval from the memory interface layer
 
+import time
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from portable_brain.common.logging.logger import logger
@@ -12,11 +14,13 @@ from portable_brain.common.services.droidrun_tools.droidrun_client import DroidR
 # dependencies
 from portable_brain.core.dependencies import (
     get_retrieval_agent,
-    get_droidrun_client
+    get_droidrun_client,
+    get_memory_retriever,
 )
+from portable_brain.memory.main_retriever import MemoryRetriever
 
 # request models
-from portable_brain.api.request_models.tests import ToolCallRequest
+from portable_brain.api.request_models.tests import ToolCallRequest, SemanticSearchRequest
 
 # settings
 from portable_brain.config.app_config import get_service_settings
@@ -37,3 +41,22 @@ async def test_tool_call(
     result = await retrieval_agent.test_retrieve(request.user_request)
     # logger.info(f"Retrieval test result: {result}")
     return {"result": result}
+
+@router.post("/semantic-search")
+async def test_semantic_search(
+    request: SemanticSearchRequest,
+    memory_retriever: MemoryRetriever = Depends(get_memory_retriever),
+):
+    """
+    Test route: calls find_semantically_similar directly and logs retrieval latency.
+    NOT an agent test exactly, but measures the latency of tool called retrieval method w/ caches.
+    """
+    start = time.perf_counter()
+    results = await memory_retriever.find_semantically_similar(
+        query=request.query,
+        limit=request.limit,
+        disable_cache=request.disable_cache,
+    )
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(f"Semantic search took {elapsed_ms:.2f}ms (cache disabled: {request.disable_cache})")
+    return {"results": results, "elapsed_ms": round(elapsed_ms, 2)}

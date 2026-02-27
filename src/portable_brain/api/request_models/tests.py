@@ -59,3 +59,8 @@ class PersonRelationshipRequest(BaseModel):
     relationship_description: str
     platform: Optional[str] = None
     platform_handle: Optional[str] = None
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    limit: int = 5
+    disable_cache: bool = False

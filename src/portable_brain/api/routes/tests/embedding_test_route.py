@@ -30,7 +30,6 @@ from portable_brain.common.db.crud.memory.text_embeddings_crud import find_simil
 
 router = APIRouter(prefix="/embedding-test", tags=["Tests"])
 
-
 @router.post("/test-text-embedding")
 async def test_text_embedding(
     request: TestEmbeddingRequest,

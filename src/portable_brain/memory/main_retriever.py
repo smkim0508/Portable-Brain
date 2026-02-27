@@ -46,6 +46,7 @@ class MemoryRetriever():
     1. Exact match cache - skips embedding client entirely on identical query texts (LRU via OrderedDict, max 50)
     2. Semantic cache — skips db retrieval if a sufficiently similar query was seen before (FIFO deque, max 10)
     NOTE: only supported by find_semantically_similar for now, to be implemented for other methods
+    - one caveat is if the memory is updated after the query, the cache may become stale; future TBD
 
     TODO: just baseline right now, memory to be refined.
     """
@@ -56,7 +57,7 @@ class MemoryRetriever():
         # caches to reduce latency, for text embedding logs
         self._exact_cache: OrderedDict[str, list[str]] = OrderedDict()
         self._semantic_cache: deque[tuple[list[float], list[str]]] = deque(maxlen=10) # query_vector, results tuple
-        self._cosine_similarity_threshold = 0.90 # threshold for semantic cache
+        self._cosine_similarity_threshold = 0.70 # threshold for semantic cache
         self._exact_cache_max = 50 # threshold for max number of items in exact query cache
 
     # =====================================================================
@@ -240,6 +241,7 @@ class MemoryRetriever():
         """
         if disable_cache:
             # for testing, just skips cache logic entirely
+            logger.info(f"Skipping cache for query: {query}")
             query_vectors = await self.text_embedding_client.aembed_text(text=[query], task_type="RETRIEVAL_QUERY")
             if not query_vectors:
                 logger.warning(f"Failed to embed query: {query}, returning empty list")
