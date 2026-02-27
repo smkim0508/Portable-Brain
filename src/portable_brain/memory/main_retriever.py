@@ -9,6 +9,8 @@ from portable_brain.common.db.models.memory.text_embeddings import TextEmbedding
 from portable_brain.common.db.models.memory.people import InterpersonalRelationship
 from portable_brain.common.services.embedding_service.text_embedding.dispatcher import TypedTextEmbeddingClient
 
+from portable_brain.common.logging.logger import logger
+
 # data structures for caches
 from collections import OrderedDict, deque
 
@@ -228,6 +230,7 @@ class MemoryRetriever():
         query: str,
         limit: int = 5,
         distance_metric: str = "cosine",
+        disable_cache: bool = False, # just for testing latency
     ) -> list[str]:
         """
         Semantic search across all embedded observations using natural language.
@@ -235,15 +238,31 @@ class MemoryRetriever():
 
         NOTE: supports both exact match and semantic caches.
         """
+        if disable_cache:
+            # for testing, just skips cache logic entirely
+            query_vectors = await self.text_embedding_client.aembed_text(text=[query], task_type="RETRIEVAL_QUERY")
+            if not query_vectors:
+                logger.warning(f"Failed to embed query: {query}, returning empty list")
+                return []
+            query_vector = query_vectors[0]
+
+            results = await find_similar_texts(
+                query_vector=query_vector,
+                main_db_engine=self.main_db_engine,
+                limit=limit,
+                distance_metric=distance_metric
+            )
+            return results
         # 1) exact match — skip embedding entirely
         if query in self._exact_cache:
-            print(f"Exact cache hit: {query}")
+            logger.info(f"Exact cache hit: {query}")
             # if exact cache hit directly, just promote to most recently used spot in cache
             self._exact_cache.move_to_end(query)
             return self._exact_cache[query]
         
         query_vectors = await self.text_embedding_client.aembed_text(text=[query], task_type="RETRIEVAL_QUERY")
         if not query_vectors:
+            logger.warning(f"Failed to embed query: {query}, returning empty list")
             return []
         query_vector = query_vectors[0]
 
@@ -252,7 +271,7 @@ class MemoryRetriever():
         # - above optimization not yet implemented since cache size is negligibly small (most case) and may be beneficial if recent cache computed first and returns
         semantic_cache_result = self._find_semantic_cache_hit(query_vector)
         if semantic_cache_result:
-            print(f"Semantic cache hit on: {query}")
+            logger.info(f"Semantic cache hit: {query}")
             # NOTE: if we have a semantic cache hit, we also promote to exact cache w/ similar vector results (not exact)
             # - this is logical as even without this promotion, the next query will be the same semantic cache hit anyways
             self._set_exact_cache(query, semantic_cache_result)
